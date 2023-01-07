@@ -7,22 +7,22 @@ import lombok.NoArgsConstructor;
 import org.springframework.util.Assert;
 
 import java.time.LocalDate;
+import java.util.Locale;
 import java.util.Objects;
 
-@Embeddable //needed to persist it as a column into our aggregate
-@Getter  //custom way to retrieve the values
-@NoArgsConstructor(access = AccessLevel.PROTECTED) //hibernate needs it
+@Embeddable
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class BirthDate {
-
     private LocalDate value;
 
     private BirthDate(LocalDate value){
         this.value = value;
     }
 
-    public static BirthDate of(LocalDate value){
-        Objects.requireNonNull(value,"the value cannot be null");
-        Assert.isTrue(value.isBefore(LocalDate.now()), "the value must be later");
+    public static BirthDate of(final LocalDate value){
+        Objects.requireNonNull(value, "the birth date cannot be null");
+        Assert.isTrue(value.isAfter(LocalDate.now()),"the birth date should be in past");
         return new BirthDate(value);
     }
 }

@@ -3,19 +3,26 @@ package pt.bayonne.sensei.customer.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pt.bayonne.sensei.customer.domain.Customer;
+import pt.bayonne.sensei.customer.domain.EmailAddress;
 import pt.bayonne.sensei.customer.repository.CustomerRepository;
-
-import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
 public class CustomerServiceImpl implements CustomerService{
-
-    private final CustomerRepository customerRepository;
-
+    final CustomerRepository customerRepository;
     @Override
-    public Customer createCustomer(Customer customer) {
-
+    public Customer create(final Customer customer) {
         return customerRepository.save(customer);
     }
+
+    @Override
+    public void changeEmail(final Long customerId, final EmailAddress emailAddress) {
+        Customer customer = this.customerRepository.findById(customerId)
+                .orElseThrow(() -> new IllegalArgumentException(String.format("Couldn't find a customer by id: %s", customerId)));
+
+        customer.changeEmail(emailAddress);
+        this.customerRepository.save(customer);
+    }
+
+
 }
