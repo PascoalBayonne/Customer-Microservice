@@ -1,6 +1,8 @@
 package pt.bayonne.sensei.customer.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 import pt.bayonne.sensei.customer.domain.Customer;
 import pt.bayonne.sensei.customer.domain.EmailAddress;
@@ -8,11 +10,16 @@ import pt.bayonne.sensei.customer.repository.CustomerRepository;
 
 @Service
 @RequiredArgsConstructor
-public class CustomerServiceImpl implements CustomerService{
+public class CustomerServiceImpl implements CustomerService {
     final CustomerRepository customerRepository;
+
+    private final StreamBridge streamBridge;
+
     @Override
     public Customer create(final Customer customer) {
-        return customerRepository.save(customer);
+        Customer customerCreated = customerRepository.save(customer);
+        streamBridge.send("customer",customerCreated);
+        return customerCreated;
     }
 
     @Override
