@@ -1,5 +1,6 @@
 package pt.bayonne.sensei.customer.domain;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -12,6 +13,8 @@ import java.util.Objects;
 @Embeddable
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FirstName {
+
+    @Column(name = "firstName")
     private String value;
 
     private FirstName(String value){

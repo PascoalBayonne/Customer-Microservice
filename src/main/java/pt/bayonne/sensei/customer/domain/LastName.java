@@ -1,5 +1,6 @@
 package pt.bayonne.sensei.customer.domain;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -13,6 +14,7 @@ import java.util.Objects;
 @NoArgsConstructor(access = AccessLevel.PROTECTED) //hibernate needs it
 public class LastName {
 
+    @Column(name = "lastName")
     private String value;
 
     private LastName(String value){
