@@ -2,28 +2,24 @@ package pt.bayonne.sensei.customer.messaging;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
-import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Configuration;
 import pt.bayonne.sensei.customer.domain.*;
-import pt.bayonne.sensei.customer.service.CustomerService;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 
-import java.time.LocalDate;
 import java.util.function.Supplier;
 
-@Component
+@Configuration
 @RequiredArgsConstructor
 public class CustomerMessaging {
 
-    private final CustomerService customerService;
+    @Bean
+    public Sinks.Many<Customer> customerProducer(){
+        return Sinks.many().replay().latest();
+    }
 
     @Bean
-    public Supplier<Customer> customerSupplier(){
-        return ()->{
-            Customer customerCreated = Customer.create(
-                    FirstName.of("James"),
-                    LastName.of("Gosling"),
-                    BirthDate.of(LocalDate.of(1965, 11, 10)),
-                    EmailAddress.of("james.jdk@hotmail.com"));
-            return customerService.create(customerCreated);
-        };
+    public Supplier<Flux<Customer>> customerSupplier(){
+        return ()-> customerProducer().asFlux();
     }
 }
