@@ -15,6 +15,8 @@ import java.util.Objects;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class BirthDate {
+    public static final String THE_BIRTH_DATE_CANNOT_BE_NULL = "the birth date cannot be null";
+    public static final String THE_BIRTH_DATE_SHOULD_BE_IN_PAST = "the birth date should be in past";
     @Column(name = "birthDate")
     private LocalDate value;
 
@@ -23,8 +25,8 @@ public class BirthDate {
     }
 
     public static BirthDate of(final LocalDate value){
-        Objects.requireNonNull(value, "the birth date cannot be null");
-        Assert.isTrue(!value.isAfter(LocalDate.now()),"the birth date should be in past");
+        Objects.requireNonNull(value, THE_BIRTH_DATE_CANNOT_BE_NULL);
+        Assert.isTrue(value.isBefore(LocalDate.now()), THE_BIRTH_DATE_SHOULD_BE_IN_PAST);
         return new BirthDate(value);
     }
 }

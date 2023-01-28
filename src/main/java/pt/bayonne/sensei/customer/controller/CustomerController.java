@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import pt.bayonne.sensei.customer.controller.dto.CustomerDTO;
+import pt.bayonne.sensei.customer.controller.mapper.CustomerMapper;
 import pt.bayonne.sensei.customer.domain.*;
 import pt.bayonne.sensei.customer.service.CustomerService;
 
@@ -20,12 +21,7 @@ public class CustomerController {
     @PostMapping
     public ResponseEntity<Customer> create(@RequestBody @Valid final CustomerDTO customerDTO){
 
-        FirstName firstName = FirstName.of(customerDTO.firstName());
-        LastName lastName = LastName.of(customerDTO.lastName());
-        BirthDate birthDate = BirthDate.of(customerDTO.birthDate());
-        EmailAddress emailAddress = EmailAddress.of(customerDTO.emailAddress());
-
-        Customer customer = Customer.create(firstName, lastName, birthDate, emailAddress);
+        Customer customer = CustomerMapper.mapToCustomer(customerDTO);
         Customer createdCustomer = customerService.create(customer);
 
         return ResponseEntity.ok(createdCustomer);

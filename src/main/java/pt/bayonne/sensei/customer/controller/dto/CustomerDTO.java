@@ -1,9 +1,6 @@
 package pt.bayonne.sensei.customer.controller.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
 
@@ -14,5 +11,8 @@ public record CustomerDTO(@NotBlank(message = "first name cannot be blank") Stri
                           LocalDate birthDate,
                           @NotBlank(message = "emailAddress cannot be blank")
                           @Email(message = "please provide a valid email address")
-                          String emailAddress) {
+                          String emailAddress,
+                          @NotNull(message = "Social Security Number should not be null")
+                                  @Size(min = 9,max = 9, message = "The social security number should have 9 characters")
+                          Integer ssn) {
 }
