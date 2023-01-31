@@ -13,6 +13,5 @@ public record CustomerDTO(@NotBlank(message = "first name cannot be blank") Stri
                           @Email(message = "please provide a valid email address")
                           String emailAddress,
                           @NotNull(message = "Social Security Number should not be null")
-                                  @Size(min = 9,max = 9, message = "The social security number should have 9 characters")
                           Integer ssn) {
 }
