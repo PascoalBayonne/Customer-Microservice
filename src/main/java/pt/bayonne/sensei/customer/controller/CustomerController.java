@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import pt.bayonne.sensei.customer.controller.dto.CustomerDTO;
 import pt.bayonne.sensei.customer.controller.mapper.CustomerMapper;
-import pt.bayonne.sensei.customer.domain.*;
+import pt.bayonne.sensei.customer.domain.Customer;
 import pt.bayonne.sensei.customer.service.CustomerService;
 
 @RestController

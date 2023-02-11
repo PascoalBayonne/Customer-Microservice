@@ -3,7 +3,6 @@ package pt.bayonne.sensei.customer.messaging;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import pt.bayonne.sensei.customer.domain.*;
 import pt.bayonne.sensei.customer.messaging.event.CustomerEvent;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
