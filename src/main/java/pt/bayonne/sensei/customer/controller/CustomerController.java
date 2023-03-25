@@ -3,13 +3,12 @@ package pt.bayonne.sensei.customer.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import pt.bayonne.sensei.customer.controller.dto.CustomerDTO;
+import pt.bayonne.sensei.customer.controller.dto.EmailDTO;
 import pt.bayonne.sensei.customer.controller.mapper.CustomerMapper;
 import pt.bayonne.sensei.customer.domain.Customer;
+import pt.bayonne.sensei.customer.domain.EmailAddress;
 import pt.bayonne.sensei.customer.service.CustomerService;
 
 @RestController
@@ -25,6 +24,12 @@ public class CustomerController {
         Customer createdCustomer = customerService.create(customer);
 
         return ResponseEntity.ok(createdCustomer);
+    }
+
+    @PatchMapping("/{customerId}/email")
+    public ResponseEntity<Void> changeEmail(@PathVariable final Long customerId, @RequestBody @Valid final EmailDTO emailDTO){
+        customerService.changeEmail(customerId, EmailAddress.of(emailDTO.emailAddress()));
+        return ResponseEntity.accepted().build();
     }
 
 }
