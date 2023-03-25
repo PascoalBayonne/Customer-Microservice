@@ -1,6 +1,8 @@
 package pt.bayonne.sensei.customer.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 import pt.bayonne.sensei.customer.domain.Customer;
 import pt.bayonne.sensei.customer.domain.EmailAddress;
@@ -14,15 +16,18 @@ import java.time.Instant;
 @Service
 @RequiredArgsConstructor
 public class CustomerServiceImpl implements CustomerService {
+    public static final String HEADER_NAME = "X-EVENT-TYPE";
     private final CustomerRepository customerRepository;
 
-    private final Sinks.Many<CustomerEvent> customerProducer;
+    private final Sinks.Many<Message<?>> customerProducer;
 
     @Override
     public Customer create(final Customer customer) {
         Customer customerCreated = customerRepository.save(customer);
         var customerCreatedEvent = new CustomerEvent.CustomerCreated(customerCreated.getId(), Instant.now(), CustomerMapper.mapToCustomerDTO(customerCreated));
-        customerProducer.tryEmitNext(customerCreatedEvent);
+        var customerCreatedMessage =  MessageBuilder.withPayload(customerCreatedEvent)
+                .setHeader(HEADER_NAME, "CustomerCreated").build();
+        customerProducer.tryEmitNext(customerCreatedMessage);
         return customerCreated;
     }
 
@@ -33,6 +38,11 @@ public class CustomerServiceImpl implements CustomerService {
 
         customer.changeEmail(emailAddress);
         this.customerRepository.save(customer);
+
+        var customerEmailChangedEvent = new CustomerEvent.EmailChanged(customer.getId(), Instant.now(), CustomerMapper.mapToCustomerDTO(customer));
+        var customerEmailChangedMessage =  MessageBuilder.withPayload(customerEmailChangedEvent)
+                .setHeader(HEADER_NAME, "EmailChanged").build();
+        customerProducer.tryEmitNext(customerEmailChangedMessage);
     }
 
 
