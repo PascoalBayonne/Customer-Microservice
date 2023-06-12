@@ -1,4 +1,4 @@
-package pt.bayonne.sensei.customer.contractsss;
+package pt.bayonne.sensei.customer.contracts;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.extension.ExtendWith;

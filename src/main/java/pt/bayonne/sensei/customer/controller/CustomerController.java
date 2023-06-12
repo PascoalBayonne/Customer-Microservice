@@ -18,12 +18,13 @@ public class CustomerController {
     private final CustomerService customerService;
 
     @PostMapping
-    public ResponseEntity<Customer> create(@RequestBody @Valid final CustomerDTO customerDTO){
+    public ResponseEntity<CustomerDTO> create(@RequestBody @Valid final CustomerDTO customerDTO){
 
         Customer customer = CustomerMapper.mapToCustomer(customerDTO);
         Customer createdCustomer = customerService.create(customer);
 
-        return ResponseEntity.ok(createdCustomer);
+        CustomerDTO customerCreatedDTO = CustomerMapper.mapToCustomerDTO(createdCustomer);
+        return ResponseEntity.ok(customerCreatedDTO);
     }
 
     @PatchMapping("/{customerId}/email")

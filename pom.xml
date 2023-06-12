@@ -118,7 +118,8 @@
                 <configuration>
                     <testFramework>JUNIT5</testFramework>
                     <nameSuffixForTests>ITCase</nameSuffixForTests>
-                    <packageWithBaseClasses>pt.bayonne.sensei.customer.contractsss</packageWithBaseClasses>
+                    <packageWithBaseClasses>pt.bayonne.sensei.customer.contracts</packageWithBaseClasses>
+                    <failOnNoContracts>true</failOnNoContracts>
                 </configuration>
             </plugin>
             <plugin>
