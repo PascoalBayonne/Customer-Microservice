@@ -58,12 +58,6 @@
             <version>${mapstruct.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-contract-verifier</artifactId>
-            <scope>test</scope>
-        </dependency>
-
         <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -72,28 +66,13 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.testcontainers/junit-jupiter -->
+        <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-contract-verifier -->
         <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>1.18.0</version>
-            <scope>test</scope>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-contract-verifier</artifactId>
+            <version>4.0.3</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.testcontainers/mysql -->
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>mysql</artifactId>
-            <version>1.18.0</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>kafka</artifactId>
-            <version>1.18.1</version>
-            <scope>test</scope>
-        </dependency>
 
     </dependencies>
     <dependencyManagement>
@@ -131,7 +110,6 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
-            <!--The following example, from pom.xml, shows how to specify the base test class -->
 
             <plugin>
                 <groupId>org.springframework.cloud</groupId>
@@ -140,8 +118,8 @@
                 <extensions>true</extensions>
                 <configuration>
                     <testFramework>JUNIT5</testFramework>
-                    <nameSuffixForTests>ITCase</nameSuffixForTests>
-                    <packageWithBaseClasses>pt.bayonne.sensei.customer.contracts</packageWithBaseClasses>
+                    <nameSuffixForTests>ITCASE</nameSuffixForTests>
+                    <packageWithBaseClasses>pt.bayonne.sensei.customer.base</packageWithBaseClasses>
                     <failOnNoContracts>true</failOnNoContracts>
                 </configuration>
             </plugin>
@@ -149,7 +127,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
-
         </plugins>
 
     </build>
