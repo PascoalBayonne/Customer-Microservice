@@ -6,15 +6,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.contract.verifier.messaging.boot.AutoConfigureMessageVerifier;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import pt.bayonne.sensei.customer.config.IntegrationTestBaseConfig;
 import pt.bayonne.sensei.customer.domain.*;
 import pt.bayonne.sensei.customer.service.CustomerService;
 
 import java.time.LocalDate;
 
 @ExtendWith(SpringExtension.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMessageVerifier
-public class ShouldPublishCustomerCreatedBase {
+public class ShouldPublishCustomerCreatedBase extends IntegrationTestBaseConfig {
 
     @Autowired
     private CustomerService customerService;
