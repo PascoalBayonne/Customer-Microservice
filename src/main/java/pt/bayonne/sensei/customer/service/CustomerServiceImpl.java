@@ -1,6 +1,8 @@
 package pt.bayonne.sensei.customer.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
@@ -22,13 +24,25 @@ public class CustomerServiceImpl implements CustomerService {
     private final Sinks.Many<Message<?>> customerProducer;
 
     @Override
+    @Transactional
     public Customer create(final Customer customer) {
         Customer customerCreated = customerRepository.save(customer);
-        var customerCreatedEvent = new CustomerEvent.CustomerCreated(customerCreated.getId(), Instant.now(), CustomerMapper.mapToCustomerDTO(customerCreated));
+
+        CustomerEvent.CustomerCreated customerCreatedEvent = mapToEvent(customerCreated);
+
         var customerCreatedMessage =  MessageBuilder.withPayload(customerCreatedEvent)
                 .setHeader(HEADER_NAME, "CustomerCreated").build();
+
         customerProducer.tryEmitNext(customerCreatedMessage);
         return customerCreated;
+    }
+
+    @NotNull
+    private static CustomerEvent.CustomerCreated mapToEvent(Customer customerCreated) {
+        return new CustomerEvent
+                .CustomerCreated(customerCreated.getId(),
+                Instant.now(),
+                CustomerMapper.mapToCustomerDTO(customerCreated));
     }
 
     @Override
