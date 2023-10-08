@@ -3,6 +3,7 @@ package pt.bayonne.sensei.customer.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,9 @@ public class CustomerServiceImpl implements CustomerService {
         CustomerEvent.CustomerCreated customerCreatedEvent = mapToEvent(customerCreated);
 
         var customerCreatedMessage =  MessageBuilder.withPayload(customerCreatedEvent)
-                .setHeader(HEADER_NAME, "CustomerCreated").build();
+                .setHeader(HEADER_NAME, "CustomerCreated")
+                .setHeader(KafkaHeaders.KEY, customerCreatedEvent.customerId())
+                .build();
 
         customerProducer.tryEmitNext(customerCreatedMessage);
         return customerCreated;
