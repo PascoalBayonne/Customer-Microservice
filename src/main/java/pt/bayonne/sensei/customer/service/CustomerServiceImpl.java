@@ -1,7 +1,9 @@
 package pt.bayonne.sensei.customer.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.Message;
@@ -9,9 +11,11 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 import pt.bayonne.sensei.customer.domain.Customer;
 import pt.bayonne.sensei.customer.domain.EmailAddress;
+import pt.bayonne.sensei.customer.domain.OutboxMessage;
 import pt.bayonne.sensei.customer.messaging.event.CustomerDTO;
 import pt.bayonne.sensei.customer.messaging.event.CustomerEvent;
 import pt.bayonne.sensei.customer.repository.CustomerRepository;
+import pt.bayonne.sensei.customer.repository.OutboxMessageRepository;
 import reactor.core.publisher.Sinks;
 
 import java.time.Instant;
@@ -24,19 +28,25 @@ public class CustomerServiceImpl implements CustomerService {
 
     private final Sinks.Many<Message<?>> customerProducer;
 
+    private final ObjectMapper objectMapper;
+
+    private final OutboxMessageRepository outboxMessageRepository;
+
+    @SneakyThrows
     @Override
     @Transactional
     public Customer create(final Customer customer) {
         Customer customerCreated = customerRepository.save(customer);
 
-        CustomerEvent.CustomerCreated customerCreatedEvent = mapToEvent(customerCreated);
+        CustomerDTO customerDTO = CustomerMapper.mapToCustomerDTO(customerCreated);
 
-        var customerCreatedMessage =  MessageBuilder.withPayload(customerCreatedEvent)
-                .setHeader(HEADER_NAME, "CustomerCreated")
-                .setHeader(KafkaHeaders.KEY, customerCreatedEvent.customerId())
+        String payload = objectMapper.writeValueAsString(customerDTO);
+        var outboxMessage = OutboxMessage.builder()
+                .eventType("CustomerCreated")
+                .payload(payload)
                 .build();
 
-        customerProducer.tryEmitNext(customerCreatedMessage);
+        outboxMessageRepository.save(outboxMessage);
         return customerCreated;
     }
 
@@ -65,7 +75,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     interface CustomerMapper {
         static CustomerDTO mapToCustomerDTO(final Customer customerCreated) {
-            return new CustomerDTO(customerCreated.getFirstName().getValue(),
+            return new CustomerDTO(customerCreated.getId(), customerCreated.getFirstName().getValue(),
                     customerCreated.getLastName().getValue(),
                     customerCreated.getBirthDate().getValue(),
                     customerCreated.getEmailAddress().getValue(),
