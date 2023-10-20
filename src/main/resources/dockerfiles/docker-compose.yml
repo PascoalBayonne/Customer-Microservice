@@ -10,7 +10,6 @@ services:
     ports:
       - 2181:2181
     environment:
-      TZ: ${TZ_SET}
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
 
@@ -26,7 +25,6 @@ services:
     # See https://rmoff.net/2018/08/02/kafka-listeners-explained/ for details
       - '9092:9092'
     environment:
-      TZ: ${TZ_SET}
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
@@ -58,3 +56,133 @@ services:
                 - name: "connect"
                   url: "http://kafka-connect:8083"
 
+  schema-registry:
+    image: confluentinc/cp-schema-registry
+    ports:
+      - 8081:8081
+    depends_on:
+      - zookeeper
+      - kafka
+    volumes:
+      - ./scripts:/scripts
+    environment:
+      TZ: ${TZ}
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
+      SCHEMA_REGISTRY_AVRO_COMPATIBILITY_LEVEL: "none"
+      SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL: "WARN"
+
+  ksql-server-1:
+    image: confluentinc/cp-ksqldb-server
+    ports:
+      - '8088:8088'
+    depends_on:
+      - kafka
+      - schema-registry
+    environment:
+      TZ: ${TZ}
+      KSQL_BOOTSTRAP_SERVERS: kafka:29092
+      KSQL_LISTENERS: http://0.0.0.0:8088
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      KSQL_KSQL_SERVICE_ID: "my-ksql-server"
+      KSQL_KSQL_EXTENSION_DIR: "/etc/ksql/ext"
+    volumes:
+      - ./scripts:/scripts
+      - ./ext:/etc/ksql/ext
+
+  ksql-server-2:
+    image: confluentinc/cp-ksqldb-server
+    ports:
+      - '28088:8088'
+    depends_on:
+      - kafka
+      - schema-registry
+    environment:
+      TZ: ${TZ}
+      KSQL_BOOTSTRAP_SERVERS: kafka:29092
+      KSQL_LISTENERS: http://0.0.0.0:8088
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      KSQL_KSQL_SERVICE_ID: "my-ksql-server"
+      KSQL_KSQL_EXTENSION_DIR: "/etc/ksql/ext"
+    volumes:
+      - ./scripts:/scripts
+      - ./ext:/etc/ksql/ext
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - 9090:9090
+    command: "--config.file=/etc/prometheus/prometheus.yml"
+    volumes:
+      - ./config/prometheus.yaml:/Users/pascoalbayonne/dev/prometheus/prometheus.yaml:ro
+      - ./data:/prometheus
+    restart: unless-stopped
+    networks: [ "sensei-services" ]
+
+  grafana:
+    container_name: grafana
+    restart: always
+    image: grafana/grafana
+    ports:
+      - '3000:3000'
+    networks: [ "sensei-services" ]
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    ports:
+      - 9443:9443
+    volumes:
+      - data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  zipkin-all-in-one:
+    image: openzipkin/zipkin:latest
+    restart: always
+    ports:
+      - "9411:9411"
+
+  mysql:
+    image: arm64v8/mysql:oracle
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: sales_info
+    ports:
+      - "3306:3306"
+  connect:
+    image: debezium/connect
+    ports:
+      - 8083:8083
+    links:
+      - kafka
+      - mysql
+      - zookeeper
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:29092
+      - GROUP_ID=1
+      - CONFIG_STORAGE_TOPIC=my_connect_configs
+      - OFFSET_STORAGE_TOPIC=my_connect_offsets
+      - STATUS_STORAGE_TOPIC=my_connect_statuses
+
+  redis:
+    image: docker.io/bitnami/redis:7.2
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    ports:
+      - '6379:6379'
+    volumes:
+      - 'redis_data:/bitnami/redis/data'
+networks:
+  sensei-services:
+
+volumes:
+  redis_data:
+    driver: local
+  prometheus-data:
+    driver: local
+  data: {}

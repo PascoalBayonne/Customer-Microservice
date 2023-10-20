@@ -1,12 +1,10 @@
 package pt.bayonne.sensei.customer.messaging;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
@@ -32,18 +30,22 @@ public class OutboxMessagePublisher {
     private final Sinks.Many<Message<?>> customerProducer;
 
 
+    /**
+     * @apiNote don't forget to add another scheduler which will delete  messages sent.
+     * Something like housekeeper, because this table may grow too fast.
+     *
+     */
     @Scheduled(fixedDelay = 1000)
     @Transactional
-    public void deliver(){
+    public void deliver() {
         this.outboxMessageRepository.findTop10BySentOrderByIdAsc(false)
-                .forEach(outboxMessage -> {
+                .forEach(this::deliver);
+    }
 
-                    Message<CustomerEvent.CustomerCreated> customerCreatedMessage = mapToMessage(outboxMessage);
-
-                    customerProducer.tryEmitNext(customerCreatedMessage);
-
-                    outboxMessage.delivered();
-                });
+    private void deliver(final OutboxMessage outboxMessage) {
+        Message<CustomerEvent.CustomerCreated> customerCreatedMessage = mapToMessage(outboxMessage);
+        customerProducer.tryEmitNext(customerCreatedMessage);
+        outboxMessage.delivered();
     }
 
 

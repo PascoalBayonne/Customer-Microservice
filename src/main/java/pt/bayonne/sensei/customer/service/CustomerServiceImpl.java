@@ -75,7 +75,8 @@ public class CustomerServiceImpl implements CustomerService {
 
     interface CustomerMapper {
         static CustomerDTO mapToCustomerDTO(final Customer customerCreated) {
-            return new CustomerDTO(customerCreated.getId(), customerCreated.getFirstName().getValue(),
+            return new CustomerDTO(customerCreated.getId(),
+                    customerCreated.getFirstName().getValue(),
                     customerCreated.getLastName().getValue(),
                     customerCreated.getBirthDate().getValue(),
                     customerCreated.getEmailAddress().getValue(),
