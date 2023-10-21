@@ -23,12 +23,15 @@
 //import java.util.function.Supplier;
 //import java.util.stream.Collectors;
 //
-
+//
 ///**
-// * Don't use this approach because you are just once again committing sent before acknowledgement from kafka.
+// * 1- Don't use this approach because you are just once again committing sent before acknowledgement from kafka.
 // * And also it is async transaction can be difficult to manage
+// * 2- You may end up having multiple instances of this application, so remember that they will be triggered in the same
+// * time causing duplication of messages or even deadlock in resources such as database. For that reason we are going to
+// * talk soon about distributed locks. But you can try to implement it by yourself.
 // */
-
+//
 //@Component
 //@RequiredArgsConstructor
 //@Slf4j
