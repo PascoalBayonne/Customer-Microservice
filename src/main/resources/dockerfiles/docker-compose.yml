@@ -58,3 +58,11 @@ services:
                 - name: "connect"
                   url: "http://kafka-connect:8083"
 
+  mysql:
+    platform: linux/x86_64
+    image: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: Customer
+    ports:
+      - "3306:3306"
