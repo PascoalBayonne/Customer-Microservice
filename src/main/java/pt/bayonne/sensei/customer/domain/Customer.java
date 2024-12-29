@@ -1,5 +1,8 @@
 package pt.bayonne.sensei.customer.domain;
 
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -16,6 +19,8 @@ public class Customer {
     private Long id;
 
 
+    @Embedded
+    @AttributeOverride(name = "value", column = @Column(name = "firstName"))
     private FirstName firstName;
 
     private LastName lastName;

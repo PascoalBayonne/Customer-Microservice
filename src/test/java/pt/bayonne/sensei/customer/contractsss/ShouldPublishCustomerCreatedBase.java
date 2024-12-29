@@ -1,6 +1,7 @@
 package pt.bayonne.sensei.customer.contractsss;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +21,7 @@ public class ShouldPublishCustomerCreatedBase extends IntegrationTestBaseConfig 
     private CustomerService customerService;
 
 
+    @Test
      void shouldPublishCustomerCreated(){
         var customer = Customer.create(FirstName.of("Nasir"),
                 LastName.of("Jones"),
