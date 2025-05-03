@@ -36,8 +36,6 @@ public class IntegrationTestBaseConfig {
     public static void setup(DynamicPropertyRegistry dynamicPropertyRegistry) {
         Startables.deepStart(mySQLContainer, kafkaContainer).join();
 
-
-
         dynamicPropertyRegistry.add("spring.datasource.url", mySQLContainer::getJdbcUrl);
         dynamicPropertyRegistry.add("spring.datasource.username", mySQLContainer::getUsername);
         dynamicPropertyRegistry.add("spring.datasource.password", mySQLContainer::getPassword);

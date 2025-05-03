@@ -4,8 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
@@ -23,7 +21,12 @@ import java.time.Instant;
 @Service
 @RequiredArgsConstructor
 public class CustomerServiceImpl implements CustomerService {
-    public static final String HEADER_NAME = "X-EVENT-TYPE";
+    /**
+     * @apiNote this is the header name used to identify the event type.
+     * This is used to identify the event type in the outbox message.
+     */
+    private static final String HEADER_NAME = "X-EVENT-TYPE";
+
     private final CustomerRepository customerRepository;
 
     private final Sinks.Many<Message<?>> customerProducer;
@@ -31,6 +34,8 @@ public class CustomerServiceImpl implements CustomerService {
     private final ObjectMapper objectMapper;
 
     private final OutboxMessageRepository outboxMessageRepository;
+
+
 
     @SneakyThrows
     @Override
@@ -50,14 +55,6 @@ public class CustomerServiceImpl implements CustomerService {
         return customerCreated;
     }
 
-    @NotNull
-    private static CustomerEvent.CustomerCreated mapToEvent(Customer customerCreated) {
-        return new CustomerEvent
-                .CustomerCreated(customerCreated.getId(),
-                Instant.now(),
-                CustomerMapper.mapToCustomerDTO(customerCreated));
-    }
-
     @Override
     public void changeEmail(final Long customerId, final EmailAddress emailAddress) {
         Customer customer = this.customerRepository.findById(customerId)
@@ -67,7 +64,7 @@ public class CustomerServiceImpl implements CustomerService {
         this.customerRepository.save(customer);
 
         var customerEmailChangedEvent = new CustomerEvent.EmailChanged(customer.getId(), Instant.now(), CustomerMapper.mapToCustomerDTO(customer));
-        var customerEmailChangedMessage =  MessageBuilder.withPayload(customerEmailChangedEvent)
+        var customerEmailChangedMessage = MessageBuilder.withPayload(customerEmailChangedEvent)
                 .setHeader(HEADER_NAME, "EmailChanged").build();
         customerProducer.tryEmitNext(customerEmailChangedMessage);
     }
