@@ -5,6 +5,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
@@ -17,6 +18,7 @@ import pt.bayonne.sensei.customer.repository.OutboxMessageRepository;
 import reactor.core.publisher.Sinks;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 
@@ -36,15 +38,19 @@ public class OutboxMessagePublisher {
      *
      */
     @Scheduled(fixedDelay = 1000)
+    @SchedulerLock(name = "outboxMessagePublisher", lockAtMostFor = "PT30S", lockAtLeastFor = "PT25S")
     @Transactional
     public void deliver() {
         this.outboxMessageRepository.findTop10BySentOrderByIdAsc(false)
                 .forEach(this::deliver);
     }
 
+    @SneakyThrows
     private void deliver(final OutboxMessage outboxMessage) {
         Message<CustomerEvent.CustomerCreated> customerCreatedMessage = mapToMessage(outboxMessage);
         customerProducer.tryEmitNext(customerCreatedMessage);
+        log.info("------------> delivering events: {}", customerCreatedMessage);
+        Thread.sleep(Duration.ofSeconds(20).toMillis());
         outboxMessage.delivered();
     }
 
