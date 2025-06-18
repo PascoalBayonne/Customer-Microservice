@@ -29,7 +29,7 @@ public class OutboxMessagePublisher {
 
     private final OutboxMessageRepository outboxMessageRepository;
     private final ObjectMapper objectMapper;
-    private final Sinks.Many<Message<?>> customerProducer;
+//    private final Sinks.Many<Message<?>> customerProducer;
 
 
     /**
@@ -48,7 +48,7 @@ public class OutboxMessagePublisher {
     @SneakyThrows
     private void deliver(final OutboxMessage outboxMessage) {
         Message<CustomerEvent.CustomerCreated> customerCreatedMessage = mapToMessage(outboxMessage);
-        customerProducer.tryEmitNext(customerCreatedMessage);
+//        customerProducer.tryEmitNext(customerCreatedMessage);
         log.info("------------> delivering events: {}", customerCreatedMessage);
         Thread.sleep(Duration.ofSeconds(20).toMillis());
         outboxMessage.delivered();

@@ -20,4 +20,8 @@ public interface CustomerMapper {
         return Customer.create(firstName, lastName, birthDate, emailAddress, ssn);
     }
 
+    static CustomerDTO mapToCustomerDTO(final Customer customer) {
+        return new CustomerDTO(customer.getFirstName().getValue(), customer.getLastName().getValue(), customer.getBirthDate().getValue(), customer.getEmailAddress().getValue(), customer.getSsn().getSsn());
+    }
+
 }

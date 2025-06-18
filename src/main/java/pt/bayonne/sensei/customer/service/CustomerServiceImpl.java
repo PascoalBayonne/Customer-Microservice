@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
@@ -23,8 +24,9 @@ import java.time.Instant;
 public class CustomerServiceImpl implements CustomerService {
     public static final String HEADER_NAME = "X-EVENT-TYPE";
     private final CustomerRepository customerRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
-    private final Sinks.Many<Message<?>> customerProducer;
+//    private final Sinks.Many<Message<?>> customerProducer;
 
     private final ObjectMapper objectMapper;
 
@@ -45,13 +47,14 @@ public class CustomerServiceImpl implements CustomerService {
 
         CustomerDTO customerDTO = CustomerMapper.mapToCustomerDTO(customerCreated);
 
-        String payload = objectMapper.writeValueAsString(customerDTO);
-        var outboxMessage = OutboxMessage.builder()
-                .eventType("CustomerCreated")
-                .payload(payload)
-                .build();
+//        String payload = objectMapper.writeValueAsString(customerDTO);
+//        var outboxMessage = OutboxMessage.builder()
+//                .eventType("CustomerCreated")
+//                .payload(payload)
+//                .build();
 
-        outboxMessageRepository.save(outboxMessage);
+        //outboxMessageRepository.save(outboxMessage);
+        applicationEventPublisher.publishEvent(customerDTO);
         return customerCreated;
     }
 
@@ -66,7 +69,7 @@ public class CustomerServiceImpl implements CustomerService {
         var customerEmailChangedEvent = new CustomerEvent.EmailChanged(customer.getId(), Instant.now(), CustomerMapper.mapToCustomerDTO(customer));
         var customerEmailChangedMessage = MessageBuilder.withPayload(customerEmailChangedEvent)
                 .setHeader(HEADER_NAME, "EmailChanged").build();
-        customerProducer.tryEmitNext(customerEmailChangedMessage);
+//        customerProducer.tryEmitNext(customerEmailChangedMessage);
     }
 
 

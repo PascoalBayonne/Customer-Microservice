@@ -1,15 +1,19 @@
 package pt.bayonne.sensei.customer.domain;
 
+import net.datafaker.Faker;
 import org.junit.jupiter.api.Test;
+
+import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class FirstNameTest {
 
+    private Faker faker = new Faker(Locale.of("en_IN"));
     @Test
     void shouldCreateFirstName() {
         //given
-        var givenFirstName = "Martin";
+        var givenFirstName = faker.name().firstName();
         //when
         FirstName firstNameCreated = FirstName.of(givenFirstName);
         //then

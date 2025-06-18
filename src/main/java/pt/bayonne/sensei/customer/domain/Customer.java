@@ -6,10 +6,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Getter
 @NoArgsConstructor
+@ToString
 public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -34,11 +36,11 @@ public class Customer {
         this.ssn = ssn;
     }
 
-    public static Customer create(FirstName firstName, LastName lastName, BirthDate birthDate, EmailAddress emailAddress, SSN ssn){
-        return new Customer(firstName,lastName,birthDate,emailAddress, ssn);
+    public static Customer create(FirstName firstName, LastName lastName, BirthDate birthDate, EmailAddress emailAddress, SSN ssn) {
+        return new Customer(firstName, lastName, birthDate, emailAddress, ssn);
     }
 
-    public void changeEmail(final EmailAddress emailAddress){
+    public void changeEmail(final EmailAddress emailAddress) {
         this.emailAddress = emailAddress;
     }
 
