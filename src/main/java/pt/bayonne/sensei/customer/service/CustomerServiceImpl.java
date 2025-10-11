@@ -49,7 +49,7 @@ public class CustomerServiceImpl implements CustomerService {
         CustomerEvent.CustomerCreatedEvent customerCreatedEvent =
                 new CustomerEvent.CustomerCreatedEvent(newCustomer.getId(),
                         newCustomer.getCreatedAt().toInstant(ZoneOffset.UTC),
-                        CUSTOMER_CREATED_EVENT, API.BASE_PATH + API.CREATE_V1);
+                        CUSTOMER_CREATED_EVENT, API.BASE_PATH + API.CUSTOMER_V1 + "/" + newCustomer.getId());
 
         var outboxMessage = OutboxMessage.builder()
                 .eventType(CUSTOMER_CREATED_EVENT)
