@@ -1,15 +1,18 @@
 package pt.bayonne.sensei.customer.domain;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @NoArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -25,6 +28,9 @@ public class Customer {
     private EmailAddress emailAddress;
 
     private SSN ssn;
+
+    @CreatedDate
+    private LocalDateTime createdAt;
 
     private Customer(FirstName firstName, LastName lastName, BirthDate birthDate, EmailAddress emailAddress, SSN ssn) {
         this.firstName = firstName;

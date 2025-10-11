@@ -1,6 +1,177 @@
 # Changelog
 
-## [Unreleased] - 2025-01-07
+## [Unreleased] - 2025-10-11
+
+### 🚀 Major Updates
+
+#### MockMvcTester Integration and Modern Testing Framework
+- **Implemented MockMvcTester** - Modern replacement for MockMvc with fluent API
+- **Enhanced Test Infrastructure** - Improved test configuration and data management
+- **API Exception Handling** - Added structured exception handling with proper HTTP status codes
+
+### ✨ New Features
+
+#### Modern MockMvcTester Testing Framework
+- **Added `CustomerControllerTest.java`** - Comprehensive controller testing using MockMvcTester
+- **Implemented AssertJ-style assertions** - Fluent and readable test assertions
+- **JSON-based test expectations** - External JSON files for expected responses
+- **Automated test data setup** - SQL scripts for consistent test data
+
+#### Enhanced Exception Handling
+- **Added `ResourceNotFoundException.java`** - Custom exception for resource not found scenarios
+- **Implemented @ResponseStatus** - Automatic HTTP status code mapping
+- **Structured error handling** - Consistent API error responses
+
+#### Improved Test Configuration
+- **Enhanced ContainersConfiguration** - Better testcontainer management
+- **Added test-specific properties** - Isolated test configuration
+- **Test data management** - Automated schema and data setup
+
+### 🔧 Technical Improvements
+
+#### Modern Testing Approach
+- **MockMvcTester Integration**: Replaced traditional MockMvc with modern fluent API
+- **JSON Expectation Files**: External JSON files for maintainable test expectations
+- **Test Data Isolation**: SQL scripts for consistent test data setup
+- **Spring Boot Test Integration**: Full integration testing with testcontainers
+
+#### API Enhancement
+- **Customer Lookup API**: Enhanced customer retrieval functionality
+- **Error Response Standardization**: Consistent HTTP status codes and error handling
+- **JSON Response Validation**: Structured response format validation
+
+#### Development Guidelines
+- **Added Junie Guidelines**: Comprehensive development standards for Java/Spring Boot
+- **TDD Practices**: Test-first development methodology
+- **Hexagonal Architecture**: Clean architecture principles and DDD practices
+- **Testing Strategy**: Multi-layer testing approach (Unit, Integration, Contract)
+
+### 📁 New Files
+
+#### Configuration and Guidelines
+- `.junie/guidelines.md` - **NEW** - Project development guidelines and standards
+- `src/main/resources/application-test.properties` - **NEW** - Test-specific application configuration
+- `src/test/resources/application-test.yaml` - **NEW** - YAML-based test configuration
+- `src/test/resources/testcontainers.properties` - **NEW** - Testcontainer-specific settings
+
+#### Exception Handling
+- `src/main/java/pt/bayonne/sensei/customer/controller/dto/ResourceNotFoundException.java` - **NEW** - Custom not found exception
+
+#### Testing Infrastructure
+- `src/test/java/pt/bayonne/sensei/customer/controller/CustomerControllerTest.java` - **NEW** - MockMvcTester-based controller tests
+- `src/test/resources/db/data.sql` - **NEW** - Test database schema and data setup
+- `src/test/resources/expectations/get-customer-success.json` - **NEW** - Expected JSON response for customer retrieval
+
+### 🔄 Enhanced Files
+
+#### Controller Layer
+- `CustomerController.java` - Enhanced with better exception handling and response mapping
+- `CustomerMapper.java` - Improved mapping functionality
+
+#### Service Layer
+- `CustomerService.java` - Added new service methods
+- `CustomerServiceImpl.java` - Enhanced service implementation with better error handling
+
+#### Domain Layer
+- `BirthDate.java` - Refined value object implementation
+
+#### Configuration
+- `ContainersConfiguration.java` - Enhanced testcontainer setup
+- `ShouldPublishCustomerCreatedBase.java` - Updated to use new testing patterns
+
+### 🧠 Technical Concepts Explained
+
+#### MockMvcTester Benefits
+The new MockMvcTester provides significant advantages over traditional MockMvc:
+
+**Before (MockMvc)**:
+```java
+mockMvc.perform(get("/api/v1/customer/1"))
+    .andExpect(status().isOk())
+    .andExpected(content().contentType(MediaType.APPLICATION_JSON))
+    .andExpected(jsonPath("$.firstName").value("John"));
+```
+
+**After (MockMvcTester)**:
+```java
+mvcTester.get().uri("/api/v1/customer/{customerId}", 1)
+    .accept(MediaType.APPLICATION_JSON)
+    .exchange()
+    .hasStatus(HttpStatus.OK)
+    .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
+    .bodyJson().isLenientlyEqualTo("expectations/get-customer-success.json");
+```
+
+**Benefits:**
+1. **Fluent API**: More readable and chainable assertions
+2. **External JSON Expectations**: Maintainable test data in separate files
+3. **AssertJ Integration**: Consistent assertion style across the project
+4. **Better IDE Support**: Enhanced autocomplete and type safety
+5. **Simplified Setup**: Less boilerplate for test configuration
+
+#### Test Data Management Strategy
+The new approach introduces structured test data management:
+
+```sql
+-- data.sql
+create table if not exists customer (
+    birth_date    date         null,
+    ssn           int          null,
+    id            bigint       not null primary key,
+    email_address varchar(255) null,
+    first_name    varchar(255) null,
+    last_name     varchar(255) null
+);
+```
+
+**Advantages:**
+- **Consistent Test Data**: Same data setup across all tests
+- **Version Control**: Test schemas tracked in git
+- **Isolated Testing**: Each test run starts with clean data
+- **Realistic Scenarios**: Production-like data structures
+
+#### Exception Handling Modernization
+Implemented structured exception handling following Spring Boot best practices:
+
+```java
+@ResponseStatus(HttpStatus.NOT_FOUND)
+public class ResourceNotFoundException extends RuntimeException {
+    // Automatic HTTP status mapping
+}
+```
+
+**Benefits:**
+- **Automatic Status Codes**: No manual response entity creation needed
+- **Consistent Error Format**: Standardized error responses
+- **Better API Documentation**: Clear HTTP status code semantics
+- **Client-Friendly**: Predictable error handling for API consumers
+
+### 🔄 Migration Impact
+
+#### For Developers
+1. **Modern Testing Experience**: More intuitive and readable test assertions
+2. **Faster Test Development**: External JSON expectations reduce boilerplate
+3. **Better Debugging**: Clear test failure messages with MockMvcTester
+4. **Consistent Guidelines**: Comprehensive development standards in `.junie/guidelines.md`
+
+#### For API Consumers
+1. **Predictable Error Responses**: Standardized HTTP status codes
+2. **Better API Documentation**: Clear error scenarios
+3. **Consistent Response Format**: Uniform JSON response structure
+
+### 🎯 Future Considerations
+
+1. **API Documentation**: Consider adding OpenAPI/Swagger documentation
+2. **Error Response Bodies**: Implement structured error response DTOs
+3. **Test Coverage**: Expand MockMvcTester tests to cover all endpoints
+4. **Performance Testing**: Add load testing with the new test infrastructure
+5. **Contract Testing**: Implement Spring Cloud Contract for API contracts
+
+---
+
+**Note**: This release introduces modern Spring Boot testing practices with MockMvcTester and establishes comprehensive development guidelines for the project.
+
+## [Previous Release] - 2025-01-07
 
 ### 🚀 Major Updates
 

@@ -7,6 +7,7 @@ import lombok.SneakyThrows;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
+import pt.bayonne.sensei.customer.controller.API;
 import pt.bayonne.sensei.customer.controller.dto.ResourceNotFoundException;
 import pt.bayonne.sensei.customer.domain.Customer;
 import pt.bayonne.sensei.customer.domain.EmailAddress;
@@ -18,17 +19,18 @@ import pt.bayonne.sensei.customer.repository.OutboxMessageRepository;
 import reactor.core.publisher.Sinks;
 
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class CustomerServiceImpl implements CustomerService {
+    public static final String CUSTOMER_CREATED_EVENT = "CustomerCreatedEvent";
     /**
      * @apiNote this is the header name used to identify the event type.
      * This is used to identify the event type in the outbox message.
      */
     private static final String HEADER_NAME = "X-EVENT-TYPE";
-
     private final CustomerRepository customerRepository;
 
     private final Sinks.Many<Message<?>> customerProducer;
@@ -38,22 +40,24 @@ public class CustomerServiceImpl implements CustomerService {
     private final OutboxMessageRepository outboxMessageRepository;
 
 
-    @SneakyThrows
     @Override
+    @SneakyThrows
     @Transactional
-    public Customer create(final Customer customer) {
-        Customer customerCreated = customerRepository.save(customer);
+    public Long create(final Customer customer) {
+        Customer newCustomer = customerRepository.save(customer);
 
-        CustomerDTO customerDTO = CustomerMapper.mapToCustomerDTO(customerCreated);
+        CustomerEvent.CustomerCreatedEvent customerCreatedEvent =
+                new CustomerEvent.CustomerCreatedEvent(newCustomer.getId(),
+                        newCustomer.getCreatedAt().toInstant(ZoneOffset.UTC),
+                        CUSTOMER_CREATED_EVENT, API.BASE_PATH + API.CREATE_V1);
 
-        String payload = objectMapper.writeValueAsString(customerDTO);
         var outboxMessage = OutboxMessage.builder()
-                .eventType("CustomerCreated")
-                .payload(payload)
+                .eventType(CUSTOMER_CREATED_EVENT)
+                .payload(objectMapper.writeValueAsString(customerCreatedEvent))
                 .build();
 
         outboxMessageRepository.save(outboxMessage);
-        return customerCreated;
+        return newCustomer.getId();
     }
 
     @Override

@@ -30,7 +30,7 @@ public class ShouldPublishCustomerCreatedBase {
                 LastName.of("Jones"),
                 BirthDate.of(LocalDate.of(1999, 8, 11)),
                 EmailAddress.of("nasisthegoat@gmail.com"), SSN.create(888888888));
-        Customer customerCreated = customerService.create(customer);
-        Assertions.assertNotNull(customerCreated);
+        Long newCustomerId = customerService.create(customer);
+        Assertions.assertNotNull(newCustomerId);
     }
 }

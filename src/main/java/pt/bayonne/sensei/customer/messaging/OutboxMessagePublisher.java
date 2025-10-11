@@ -5,22 +5,17 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import pt.bayonne.sensei.customer.domain.OutboxMessage;
-import pt.bayonne.sensei.customer.messaging.event.CustomerDTO;
 import pt.bayonne.sensei.customer.messaging.event.CustomerEvent;
 import pt.bayonne.sensei.customer.repository.OutboxMessageRepository;
 import reactor.core.publisher.Sinks;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
 
 @Component
 @RequiredArgsConstructor
@@ -35,7 +30,6 @@ public class OutboxMessagePublisher {
     /**
      * @apiNote don't forget to add another scheduler which will delete  messages sent.
      * Something like housekeeper, because this table may grow too fast.
-     *
      */
     @Scheduled(fixedDelay = 1000)
 //    @SchedulerLock(name = "outboxMessagePublisher", lockAtMostFor = "PT1M", lockAtLeastFor = "PT30S")
@@ -47,28 +41,22 @@ public class OutboxMessagePublisher {
 
     @SneakyThrows
     private void deliver(final OutboxMessage outboxMessage) {
-        Message<CustomerEvent.CustomerCreated> customerCreatedMessage = mapToMessage(outboxMessage);
+        Message<CustomerEvent.CustomerCreatedEvent> customerCreatedMessage = mapToMessage(outboxMessage);
         customerProducer.tryEmitNext(customerCreatedMessage);//ASync how we know if it was sent?
         log.info("------------> delivering events: {}", customerCreatedMessage);
-        Thread.sleep(Duration.ofSeconds(20).toMillis());
         outboxMessage.delivered();
     }
 
 
     @SneakyThrows
-    private Message<CustomerEvent.CustomerCreated> mapToMessage(final OutboxMessage outboxMessage) {
+    private Message<CustomerEvent.CustomerCreatedEvent> mapToMessage(final OutboxMessage outboxMessage) {
         String payload = outboxMessage.getPayload();
-        CustomerDTO customerDTO = objectMapper.readValue(payload, CustomerDTO.class);
+        CustomerEvent.CustomerCreatedEvent customerCreatedEvent = objectMapper.readValue(payload, CustomerEvent.CustomerCreatedEvent.class);
 
-        Instant createdAt = outboxMessage.getCreationDate()
-                .atZone(ZoneId.of("UTC"))
-                .toInstant();
-
-        var customerCreated = new CustomerEvent.CustomerCreated(customerDTO.id(), createdAt, customerDTO);
-        byte[] idAsByteArray = customerCreated.customerId().toString().getBytes(StandardCharsets.UTF_8);
-        return MessageBuilder.withPayload(customerCreated)
+        byte[] idAsByteArray = customerCreatedEvent.customerId().toString().getBytes(StandardCharsets.UTF_8);
+        return MessageBuilder.withPayload(customerCreatedEvent)
                 .setHeader("X-EVENT-TYPE", "CustomerCreated")
-                .setHeader("X-CORRELATION-ID", customerCreated.customerId())
+                .setHeader("X-CORRELATION-ID", customerCreatedEvent.customerId())
                 .setHeader(KafkaHeaders.KEY, idAsByteArray)
                 .build();
     }
