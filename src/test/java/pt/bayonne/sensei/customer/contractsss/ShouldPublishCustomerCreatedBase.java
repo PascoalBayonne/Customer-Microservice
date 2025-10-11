@@ -6,7 +6,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.contract.verifier.messaging.boot.AutoConfigureMessageVerifier;
 import org.springframework.context.annotation.Import;
 import pt.bayonne.sensei.customer.config.ContainersConfiguration;
-import pt.bayonne.sensei.customer.domain.*;
+import pt.bayonne.sensei.customer.domain.BirthDate;
+import pt.bayonne.sensei.customer.domain.Customer;
+import pt.bayonne.sensei.customer.domain.EmailAddress;
+import pt.bayonne.sensei.customer.domain.FirstName;
+import pt.bayonne.sensei.customer.domain.LastName;
+import pt.bayonne.sensei.customer.domain.SSN;
 import pt.bayonne.sensei.customer.service.CustomerService;
 
 import java.time.LocalDate;

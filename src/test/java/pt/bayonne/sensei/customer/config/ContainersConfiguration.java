@@ -14,30 +14,27 @@ public class ContainersConfiguration {
     private static final Network network = Network.newNetwork();
 
 
-    private static MySQLContainer<?> mySQLContainer;
-
-
-    private static ConfluentKafkaContainer kafkaContainer;
-
-
     @Bean
     @ServiceConnection
     ConfluentKafkaContainer kafkaContainer() {
-        kafkaContainer = new ConfluentKafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.4.0"))
+        return new ConfluentKafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.4.0"))
                 .withNetwork(network)
                 .withNetworkAliases("kafka")
-                .withListener("kafka:19092");
-
-        return kafkaContainer;
+                .withListener("kafka:19092")
+                .withReuse(Boolean.TRUE);
     }
 
     @Bean
     @ServiceConnection
     MySQLContainer<?> mySQLContainer() {
-        mySQLContainer = new MySQLContainer<>(DockerImageName.parse("mysql:8.0.24"))
+        return new MySQLContainer<>(DockerImageName.parse("mysql:8.0.24"))
                 .withDatabaseName("Customer")
-                .withNetwork(network);
-        return mySQLContainer;
+                .withNetwork(network)
+                .withReuse(Boolean.TRUE)
+                .withExposedPorts(3306)
+                .withUsername("root")
+                .withPassword("root");
+                //.withInitScript("db/data.sql");
     }
 
 }

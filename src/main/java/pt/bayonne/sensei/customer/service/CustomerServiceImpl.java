@@ -7,6 +7,7 @@ import lombok.SneakyThrows;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
+import pt.bayonne.sensei.customer.controller.dto.ResourceNotFoundException;
 import pt.bayonne.sensei.customer.domain.Customer;
 import pt.bayonne.sensei.customer.domain.EmailAddress;
 import pt.bayonne.sensei.customer.domain.OutboxMessage;
@@ -17,6 +18,7 @@ import pt.bayonne.sensei.customer.repository.OutboxMessageRepository;
 import reactor.core.publisher.Sinks;
 
 import java.time.Instant;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +36,6 @@ public class CustomerServiceImpl implements CustomerService {
     private final ObjectMapper objectMapper;
 
     private final OutboxMessageRepository outboxMessageRepository;
-
 
 
     @SneakyThrows
@@ -57,6 +58,8 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public void changeEmail(final Long customerId, final EmailAddress emailAddress) {
+        Objects.requireNonNull(customerId, "customerId cannot be null");
+        Objects.requireNonNull(emailAddress, "emailAddress cannot be null");
         Customer customer = this.customerRepository.findById(customerId)
                 .orElseThrow(() -> new IllegalArgumentException(String.format("Couldn't find a customer by id: %s", customerId)));
 
@@ -67,6 +70,13 @@ public class CustomerServiceImpl implements CustomerService {
         var customerEmailChangedMessage = MessageBuilder.withPayload(customerEmailChangedEvent)
                 .setHeader(HEADER_NAME, "EmailChanged").build();
         customerProducer.tryEmitNext(customerEmailChangedMessage);
+    }
+
+    @Override
+    public Customer findByCustomerId(final Long customerId) {
+        Objects.requireNonNull(customerId, "Customer id is required");
+        return this.customerRepository.findById(customerId)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format("Customer with id: %s not found", customerId)));
     }
 
 

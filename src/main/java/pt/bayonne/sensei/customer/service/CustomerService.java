@@ -7,4 +7,6 @@ public interface CustomerService {
     Customer create(Customer customer);
 
     void changeEmail(Long customerId, EmailAddress emailAddress);
+
+    Customer findByCustomerId(Long customerId);
 }
