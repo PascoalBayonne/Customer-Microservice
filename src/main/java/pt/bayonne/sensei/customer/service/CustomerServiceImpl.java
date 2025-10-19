@@ -31,6 +31,7 @@ public class CustomerServiceImpl implements CustomerService {
      * This is used to identify the event type in the outbox message.
      */
     private static final String HEADER_NAME = "X-EVENT-TYPE";
+
     private final CustomerRepository customerRepository;
 
     private final Sinks.Many<Message<?>> customerProducer;
@@ -46,10 +47,10 @@ public class CustomerServiceImpl implements CustomerService {
     public Long create(final Customer customer) {
         Customer newCustomer = customerRepository.save(customer);
 
-        CustomerEvent.CustomerCreatedEvent customerCreatedEvent =
-                new CustomerEvent.CustomerCreatedEvent(newCustomer.getId(),
+        CustomerEvent.CustomerCreatedEvent customerCreatedEvent = new CustomerEvent.CustomerCreatedEvent(newCustomer.getId(),
                         newCustomer.getCreatedAt().toInstant(ZoneOffset.UTC),
-                        CUSTOMER_CREATED_EVENT, API.BASE_PATH + API.CUSTOMER_V1 + "/" + newCustomer.getId());
+                        CUSTOMER_CREATED_EVENT,
+                API.BASE_PATH + API.CUSTOMER_V1 + "/" + newCustomer.getId());
 
         var outboxMessage = OutboxMessage.builder()
                 .eventType(CUSTOMER_CREATED_EVENT)

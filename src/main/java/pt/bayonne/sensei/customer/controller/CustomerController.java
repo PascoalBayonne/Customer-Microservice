@@ -17,7 +17,7 @@ import java.net.URI;
 @RestController
 @RequestMapping(API.BASE_PATH)
 @RequiredArgsConstructor
-public class CustomerController {
+class CustomerController {
 
     private final CustomerService customerService;
 
@@ -28,7 +28,7 @@ public class CustomerController {
         Customer customer = CustomerMapper.mapToCustomer(customerDTO);
         Long newCustomerId = customerService.create(customer);
 
-        URI location = uriBuilder.path(API.CUSTOMER_V1+"/{id}")
+        URI location = uriBuilder.path(API.BASE_PATH + API.CUSTOMER_V1 + "/{id}")
                 .buildAndExpand(newCustomerId)
                 .toUri();
         return ResponseEntity.created(location).build();
