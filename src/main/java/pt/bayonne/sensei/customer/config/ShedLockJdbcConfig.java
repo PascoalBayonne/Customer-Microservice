@@ -1,15 +1,15 @@
 package pt.bayonne.sensei.customer.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import net.javacrumbs.shedlock.core.LockProvider;
 import net.javacrumbs.shedlock.provider.jdbctemplate.JdbcTemplateLockProvider;
 import net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.converter.AbstractJacksonHttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.jdbc.core.JdbcTemplate;
-
-import java.time.ZoneId;
-import java.util.TimeZone;
 
 @Configuration
 @RequiredArgsConstructor
@@ -28,5 +28,15 @@ public class ShedLockJdbcConfig {
                         .usingDbTime()
                         .build()
         );
+    }
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper();
+    }
+
+    @Bean
+    public AbstractJacksonHttpMessageConverter abstractJacksonHttpMessageConverter() {
+        return new JacksonJsonHttpMessageConverter();
     }
 }

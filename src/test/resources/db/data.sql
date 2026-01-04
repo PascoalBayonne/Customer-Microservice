@@ -16,8 +16,8 @@ create table if not exists customer_seq
 );
 
 -- Insert test customer with ID 5
--- insert into customer (id, birth_date, ssn, email_address, first_name, last_name, created_at )
--- values (1,'1890-07-11', 888888886, 'john.doe@gmail.pt', 'John', 'Doe', '');
---
--- -- Initialize the sequence to start from a value higher than any existing ID
--- insert into customer_seq (next_val) values (2);
+insert into customer (id, birth_date, ssn, email_address, first_name, last_name, created_at )
+values (1,'1890-07-11', 888888886, 'john.doe@gmail.pt', 'John', 'Doe', '');
+
+-- Initialize the sequence to start from a value higher than any existing ID
+insert into customer_seq (next_val) values (2);

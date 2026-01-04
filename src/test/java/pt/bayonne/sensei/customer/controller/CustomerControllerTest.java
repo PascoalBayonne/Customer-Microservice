@@ -6,7 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter;
+import org.springframework.http.converter.AbstractJacksonHttpMessageConverter;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.web.context.WebApplicationContext;
@@ -25,7 +25,7 @@ class CustomerControllerTest {
 
     CustomerControllerTest(@Autowired WebApplicationContext webAppContext) {
         this.mvcTester = MockMvcTester.from(webAppContext)
-                .withHttpMessageConverters(List.of(webAppContext.getBean(AbstractJackson2HttpMessageConverter.class)));
+                .withHttpMessageConverters(List.of(webAppContext.getBean(AbstractJacksonHttpMessageConverter.class)));
     }
 
 
