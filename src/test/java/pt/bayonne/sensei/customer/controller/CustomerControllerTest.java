@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.AbstractJacksonHttpMessageConverter;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.web.context.WebApplicationContext;
@@ -30,6 +31,7 @@ class CustomerControllerTest {
 
 
     @Test
+    @Sql(value = "db/data.sql")
     void givenACustomerIdWhenGetCustomerThenReturnCustomer() {
         MvcTestResult mvcTestResult = mvcTester.get()
                 .uri("/api/v1/customer/{customerId}", 1)
