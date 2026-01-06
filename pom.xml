@@ -110,7 +110,6 @@
             <artifactId>shedlock-provider-jdbc-template</artifactId>
             <version>6.5.0</version>
         </dependency>
-
     </dependencies>
 
 

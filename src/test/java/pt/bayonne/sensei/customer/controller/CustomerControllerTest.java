@@ -17,12 +17,12 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(ContainersConfiguration.class)
 class CustomerControllerTest {
 
     private final MockMvcTester mvcTester;
-
 
     CustomerControllerTest(@Autowired WebApplicationContext webAppContext) {
         this.mvcTester = MockMvcTester.from(webAppContext)
@@ -31,7 +31,7 @@ class CustomerControllerTest {
 
 
     @Test
-    @Sql(value = "db/data.sql")
+    @Sql(value = "classpath:db/data.sql")
     void givenACustomerIdWhenGetCustomerThenReturnCustomer() {
         MvcTestResult mvcTestResult = mvcTester.get()
                 .uri("/api/v1/customer/{customerId}", 1)
@@ -45,4 +45,5 @@ class CustomerControllerTest {
                 .bodyJson()
                 .isLenientlyEqualTo("expectations/get-customer-success.json");
     }
+
 }

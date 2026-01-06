@@ -2,6 +2,14 @@
 
 ## [Unreleased] - 2025-10-11
 
+### 🔧 Technical Improvements
+
+#### Database and Test Configuration Enhancements
+- **Added Production Data Script** - Added data.sql in main resources for production environment
+- **Enhanced Test Configuration** - Updated SQL path in tests to use classpath prefix
+- **Improved Date Handling** - Changed empty date string to CURDATE() function for better data consistency
+- **Code Cleanup** - Removed unnecessary blank lines and improved formatting
+
 ### 🚀 Major Updates
 
 #### MockMvcTester Integration and Modern Testing Framework
@@ -48,6 +56,9 @@
 
 ### 📁 New Files
 
+#### Database Configuration
+- `src/main/resources/schema/data.sql` - **NEW** - Production database initial data setup
+
 #### Configuration and Guidelines
 - `.junie/guidelines.md` - **NEW** - Project development guidelines and standards
 - `src/main/resources/application-test.properties` - **NEW** - Test-specific application configuration
@@ -63,6 +74,10 @@
 - `src/test/resources/expectations/get-customer-success.json` - **NEW** - Expected JSON response for customer retrieval
 
 ### 🔄 Enhanced Files
+
+#### Test Configuration
+- `src/test/java/pt/bayonne/sensei/customer/controller/CustomerControllerTest.java` - Updated SQL path to use classpath prefix and improved code formatting
+- `src/test/resources/db/data.sql` - Enhanced date handling with CURDATE() function
 
 #### Controller Layer
 - `CustomerController.java` - Enhanced with better exception handling and response mapping
