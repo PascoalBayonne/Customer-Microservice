@@ -4,14 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
-import pt.bayonne.sensei.customer.controller.API;
 import pt.bayonne.sensei.customer.controller.dto.ResourceNotFoundException;
 import pt.bayonne.sensei.customer.domain.Customer;
 import pt.bayonne.sensei.customer.domain.EmailAddress;
-import pt.bayonne.sensei.customer.domain.OutboxMessage;
 import pt.bayonne.sensei.customer.messaging.event.CustomerDTO;
 import pt.bayonne.sensei.customer.messaging.event.CustomerEvent;
 import pt.bayonne.sensei.customer.repository.CustomerRepository;
@@ -19,7 +18,6 @@ import pt.bayonne.sensei.customer.repository.OutboxMessageRepository;
 import reactor.core.publisher.Sinks;
 
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.Objects;
 
 @Service
@@ -40,24 +38,19 @@ public class CustomerServiceImpl implements CustomerService {
 
     private final OutboxMessageRepository outboxMessageRepository;
 
+    private final ApplicationEventPublisher applicationEventPublisher;
+
 
     @Override
     @SneakyThrows
     @Transactional
     public Long create(final Customer customer) {
-        Customer newCustomer = customerRepository.save(customer);
+        final Customer newCustomer = customerRepository.save(customer);
 
-        CustomerEvent.CustomerCreatedEvent customerCreatedEvent = new CustomerEvent.CustomerCreatedEvent(newCustomer.getId(),
-                        newCustomer.getCreatedAt().toInstant(ZoneOffset.UTC),
-                        CUSTOMER_CREATED_EVENT,
-                API.BASE_PATH + API.CUSTOMER_V1 + "/" + newCustomer.getId());
+        CustomerDTO customerDTO = CustomerMapper.mapToCustomerDTO(newCustomer);
 
-        var outboxMessage = OutboxMessage.builder()
-                .eventType(CUSTOMER_CREATED_EVENT)
-                .payload(objectMapper.writeValueAsString(customerCreatedEvent))
-                .build();
-
-        outboxMessageRepository.save(outboxMessage);
+        //here we are using Dependency inversion. Removing kafka (adapters) from our domain layer
+        applicationEventPublisher.publishEvent(customerDTO);
         return newCustomer.getId();
     }
 

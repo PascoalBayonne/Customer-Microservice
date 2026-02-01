@@ -1,6 +1,8 @@
 package pt.bayonne.sensei.customer.messaging.event;
 
 
+import org.springframework.modulith.events.Externalized;
+
 import java.io.Serializable;
 import java.time.Instant;
 
@@ -17,6 +19,7 @@ public sealed interface CustomerEvent extends Serializable {
 
     }
 
+    //@Externalized("customer-events::customer.emailChanged.#{customerId()}")
     record EmailChanged(Long customerId, Instant createdAt, CustomerDTO customer) implements CustomerEvent {
 
     }
@@ -28,7 +31,11 @@ public sealed interface CustomerEvent extends Serializable {
      * @param eventType
      * @param source
      */
-    record CustomerCreatedEvent(Long customerId, Instant createdAt, String eventType, String source) implements CustomerEvent {
+   // @Externalized("customer-events::customer.created.#{customerId()}")
+    record CustomerCreatedEvent(Long customerId,
+                                Instant createdAt,
+                                String eventType,
+                                String source) implements CustomerEvent {
 
     }
 }

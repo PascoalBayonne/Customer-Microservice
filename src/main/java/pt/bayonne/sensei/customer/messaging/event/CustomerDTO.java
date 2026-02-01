@@ -1,6 +1,14 @@
 package pt.bayonne.sensei.customer.messaging.event;
 
+import org.springframework.modulith.events.Externalized;
+
 import java.time.LocalDate;
 
-public record CustomerDTO(Long id,String firstName, String lastName, LocalDate birthDate, String emailAddress, Integer ssn) {
+@Externalized(target = "customer-topic::#{id()}")
+public record CustomerDTO(Long id,
+                          String firstName,
+                          String lastName,
+                          LocalDate birthDate,
+                          String emailAddress,
+                          Integer ssn) {
 }

@@ -1,24 +1,27 @@
 version: '3'
 services:
 
-  postgres:
-    image: postgres
-    restart: always
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio
     ports:
-      - "5432:5432"
-    volumes:
-      - ~/apps/postgres:/var/lib/postgresql/data
+      - "9000:9000"
+      - "9001:9001"
     environment:
-      - POSTGRES_PASSWORD=root
-      - POSTGRES_USER=root
-      - POSTGRES_DB=sales-info
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin#1234
+    volumes:
+      - ~/minio/data:/data
+    command: server /data --console-address ":9001"
 
   zookeeper:
     platform: linux/arm64/v8 #use this if you are using Mac with apple processor
     image: "confluentinc/cp-zookeeper"
     container_name: zookeeper
+    networks:
+      - cloudservices
     ports:
-      - 2181:2181
+      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -27,6 +30,8 @@ services:
     platform: linux/arm64/v8 #use this if you are using Mac with apple processor
     image: "confluentinc/cp-enterprise-kafka"
     container_name: kafka
+    networks:
+      - cloudservices
     depends_on:
       - zookeeper
     ports:
@@ -47,11 +52,34 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 100
       CONFLUENT_METRICS_ENABLE: 'false'
 
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    container_name: schema-registry
+    hostname: schema-registry
+    networks:
+      - cloudservices
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "PLAINTEXT://kafka:29092"
+
+
+
+  mongodb:
+    image: mongo
+    ports:
+      - "27017:27017"
+    command: mongod --replSet rs0
+
   postgresql:
     image: postgres:14
     hostname: postgresql
     ports:
       - "5432:5432"
+    networks:
+      - cloudservices
     volumes:
       - pg_data:/var/lib/postgresql/data
     environment:
@@ -64,6 +92,11 @@ services:
     image: conduktor/conduktor-console:1.34.1
     ports:
       - "8080:8080"
+    depends_on:
+      - kafka
+      - schema-registry
+    networks:
+      - cloudservices
     volumes:
       - conduktor_data:/var/conduktor
     environment:
@@ -80,10 +113,10 @@ services:
     image: mysql
     container_name: mysql
     ports:
-      - 3306:3306
+      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_ROOT_USER: root                   # Create a non-root user
+      MYSQL_ROOT_USER: root
       MYSQL_DATABASE: Customer
     volumes:
       - data:/var/lib/mysql
@@ -91,12 +124,8 @@ services:
 
 networks:
   cloudservices:
-  jaeger-example:
-  sensei-services:
 
 volumes:
-  data: {}
-  kurrentdb-volume-data:
-  kurrentdb-volume-logs:
-  pg_data: {}
-  conduktor_data: {}
+  data: { }
+  pg_data: { }
+  conduktor_data: { }
