@@ -1,6 +1,5 @@
 package pt.bayonne.sensei.customer.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -14,7 +13,6 @@ import pt.bayonne.sensei.customer.domain.EmailAddress;
 import pt.bayonne.sensei.customer.messaging.event.CustomerDTO;
 import pt.bayonne.sensei.customer.messaging.event.CustomerEvent;
 import pt.bayonne.sensei.customer.repository.CustomerRepository;
-import pt.bayonne.sensei.customer.repository.OutboxMessageRepository;
 import reactor.core.publisher.Sinks;
 
 import java.time.Instant;
@@ -23,20 +21,10 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class CustomerServiceImpl implements CustomerService {
-    public static final String CUSTOMER_CREATED_EVENT = "CustomerCreatedEvent";
-    /**
-     * @apiNote this is the header name used to identify the event type.
-     * This is used to identify the event type in the outbox message.
-     */
+
     private static final String HEADER_NAME = "X-EVENT-TYPE";
-
     private final CustomerRepository customerRepository;
-
     private final Sinks.Many<Message<?>> customerProducer;
-
-    private final ObjectMapper objectMapper;
-
-    private final OutboxMessageRepository outboxMessageRepository;
 
     private final ApplicationEventPublisher applicationEventPublisher;
 
@@ -47,9 +35,8 @@ public class CustomerServiceImpl implements CustomerService {
     public Long create(final Customer customer) {
         final Customer newCustomer = customerRepository.save(customer);
 
-        CustomerDTO customerDTO = CustomerMapper.mapToCustomerDTO(newCustomer);
+        final CustomerDTO customerDTO = CustomerMapper.mapToCustomerDTO(newCustomer);
 
-        //here we are using Dependency inversion. Removing kafka (adapters) from our domain layer
         applicationEventPublisher.publishEvent(customerDTO);
         return newCustomer.getId();
     }

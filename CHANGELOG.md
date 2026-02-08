@@ -1,6 +1,24 @@
 # Changelog
 
-## [Unreleased] - 2025-10-11
+## [Unreleased] - 2026-02-08
+
+### Added
+- `package-info.java` in messaging package - Marks the messaging module as an OPEN ApplicationModule for Spring Modulith
+- Configuration property `spring.modulith.events.completion-mode=archive` in `application.properties` - Enables event archival mode
+- `.java-version` file for project Java version specification
+
+### Changed
+- Simplified `OutboxMessagePublisher.java` - Removed unused imports and fields, streamlined event listener logic
+- Refactored `CustomerServiceImpl.java` - Reduced dependencies, cleaned up imports and variable adjustments
+
+### Removed
+- Deleted `ARCHITECTURE.md` documentation file
+- Deleted `docker-compose.yml` configuration
+- Deleted `guide.md` from resources
+
+---
+
+## [Previous] - 2025-10-11
 
 ### 🔧 Technical Improvements
 
