@@ -1,0 +1,573 @@
+{
+  "type": "record",
+  "name": "OutboundEmailEvent",
+  "namespace": "com.acme.communication.email.v1.outbound",
+  "doc": "Envelope for every event on topic communication.outbound-email.events. Kafka key: outboundEmailId. Published only by Communication; zero to many subscribers. Carries the email's current state plus the fact that just happened.",
+  "fields": [
+    {
+      "name": "metadata",
+      "type": {
+        "type": "record",
+        "name": "MessageMetadata",
+        "doc": "Technical metadata carried by every Communication event.",
+        "fields": [
+          {
+            "name": "messageId",
+            "type": {
+              "type": "string",
+              "logicalType": "uuid"
+            },
+            "doc": "Unique id of this message. Consumers use it for idempotent processing. Also published in the CloudEvents ce_id header."
+          },
+          {
+            "name": "messageType",
+            "type": "string",
+            "doc": "What this message is — the single source of truth for consumers. One of: com.acme.communication.OutboundEmailQueued | …Rejected | …Sent | …DeliveryFailed | …Delivered | …Bounced. Also published in the CloudEvents ce_type header. Consumers MUST dispatch on this field and skip unknown values; they must never infer the type from the payload's class (ADR-002, D3)."
+          },
+          {
+            "name": "occurredAt",
+            "type": {
+              "type": "long",
+              "logicalType": "timestamp-millis"
+            },
+            "doc": "When this happened (UTC), not when it was published."
+          },
+          {
+            "name": "source",
+            "type": "string",
+            "doc": "Producing application, e.g. communication-service or ordering-service."
+          },
+          {
+            "name": "correlationId",
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": null,
+            "doc": "Shared by every message in one business flow, for tracing across contexts."
+          },
+          {
+            "name": "causationId",
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": null,
+            "doc": "messageId of the message that caused this one, e.g. the SendEmail that led to this event."
+          }
+        ]
+      }
+    },
+    {
+      "name": "outboundEmailId",
+      "type": {
+        "type": "string",
+        "logicalType": "uuid"
+      },
+      "doc": "Identity of the OutboundEmail aggregate. Same value as the Kafka key."
+    },
+    {
+      "name": "aggregateVersion",
+      "type": "long",
+      "doc": "Per-aggregate sequence number, starting at 1 and incremented on every change. Consumers drop events with a version they have already applied and can detect gaps (ADR-002, D4)."
+    },
+    {
+      "name": "requestId",
+      "type": {
+        "type": "string",
+        "logicalType": "uuid"
+      },
+      "doc": "requestId of the SendEmail command this email came from."
+    },
+    {
+      "name": "reference",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null,
+      "doc": "The sender's opaque reference, copied from SendEmail."
+    },
+    {
+      "name": "content",
+      "type": {
+        "type": "record",
+        "name": "EmailContent",
+        "doc": "The part of an email that inbound and outbound emails have in common.",
+        "fields": [
+          {
+            "name": "messageId",
+            "type": "string",
+            "doc": "RFC 5322 Message-ID header (InternetMessageId). Used for threading and duplicate detection."
+          },
+          {
+            "name": "inReplyTo",
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": null,
+            "doc": "Message-ID of the email this one replies to."
+          },
+          {
+            "name": "references",
+            "type": {
+              "type": "array",
+              "items": "string"
+            },
+            "default": [],
+            "doc": "RFC 5322 References header: Message-IDs of earlier emails in the thread, oldest first."
+          },
+          {
+            "name": "sender",
+            "type": {
+              "type": "record",
+              "name": "EmailAddress",
+              "doc": "An RFC 5322 mailbox: an address and an optional display name.",
+              "fields": [
+                {
+                  "name": "address",
+                  "type": "string",
+                  "doc": "Normalised address, e.g. jane.doe@example.com."
+                },
+                {
+                  "name": "displayName",
+                  "type": [
+                    "null",
+                    "string"
+                  ],
+                  "default": null,
+                  "doc": "Human-readable name, e.g. Jane Doe."
+                }
+              ]
+            },
+            "doc": "Who the email is from."
+          },
+          {
+            "name": "recipients",
+            "type": {
+              "type": "record",
+              "name": "Recipients",
+              "doc": "Everyone the email is addressed to. Invariant enforced by the producer: 'to' is never empty.",
+              "fields": [
+                {
+                  "name": "to",
+                  "type": {
+                    "type": "array",
+                    "items": "EmailAddress"
+                  },
+                  "doc": "Primary recipients. At least one."
+                },
+                {
+                  "name": "cc",
+                  "type": {
+                    "type": "array",
+                    "items": "EmailAddress"
+                  },
+                  "default": [],
+                  "doc": "Carbon-copy recipients."
+                },
+                {
+                  "name": "bcc",
+                  "type": {
+                    "type": "array",
+                    "items": "EmailAddress"
+                  },
+                  "default": [],
+                  "doc": "Blind carbon-copy recipients. Personal data hidden from other recipients: restrict topic ACLs accordingly."
+                }
+              ]
+            }
+          },
+          {
+            "name": "subject",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "type": {
+              "type": "record",
+              "name": "EmailBody",
+              "doc": "The email content. At least one of text or html is present.",
+              "fields": [
+                {
+                  "name": "text",
+                  "type": [
+                    "null",
+                    "string"
+                  ],
+                  "default": null,
+                  "doc": "Plain-text part."
+                },
+                {
+                  "name": "html",
+                  "type": [
+                    "null",
+                    "string"
+                  ],
+                  "default": null,
+                  "doc": "HTML part. Inline images are referenced as cid:<contentId> and delivered as INLINE attachments."
+                }
+              ]
+            }
+          },
+          {
+            "name": "attachments",
+            "type": {
+              "type": "array",
+              "items": {
+                "type": "record",
+                "name": "Attachment",
+                "doc": "Describes an attachment and where to download it. The file itself is NEVER carried on the message: consumers fetch it from downloadUri.",
+                "fields": [
+                  {
+                    "name": "attachmentId",
+                    "type": {
+                      "type": "string",
+                      "logicalType": "uuid"
+                    },
+                    "doc": "Stable id of the stored attachment."
+                  },
+                  {
+                    "name": "fileName",
+                    "type": "string",
+                    "doc": "Original file name, e.g. invoice-2026-09.pdf. Treat as untrusted input on inbound emails."
+                  },
+                  {
+                    "name": "contentType",
+                    "type": "string",
+                    "doc": "MIME type, e.g. application/pdf."
+                  },
+                  {
+                    "name": "sizeBytes",
+                    "type": "long",
+                    "doc": "Size of the stored file in bytes, so consumers can decide whether to download it."
+                  },
+                  {
+                    "name": "sha256Checksum",
+                    "type": "string",
+                    "doc": "Lowercase hex SHA-256 of the file content. Consumers verify it after download."
+                  },
+                  {
+                    "name": "downloadUri",
+                    "type": "string",
+                    "doc": "Stable URI that requires authentication, e.g. https://attachments.internal/v1/attachments/{attachmentId}. Must NOT be a pre-signed URL: messages outlive URL expiry, and anyone who can read the topic would gain access to the file."
+                  },
+                  {
+                    "name": "disposition",
+                    "type": {
+                      "type": "enum",
+                      "name": "AttachmentDisposition",
+                      "doc": "ATTACHMENT is shown as a downloadable file; INLINE is embedded in the HTML body.",
+                      "symbols": [
+                        "ATTACHMENT",
+                        "INLINE"
+                      ],
+                      "default": "ATTACHMENT"
+                    },
+                    "default": "ATTACHMENT",
+                    "doc": "How the attachment is presented."
+                  },
+                  {
+                    "name": "contentId",
+                    "type": [
+                      "null",
+                      "string"
+                    ],
+                    "default": null,
+                    "doc": "Content-ID used by INLINE attachments (referenced as cid:<contentId> in the HTML body)."
+                  }
+                ]
+              }
+            },
+            "default": [],
+            "doc": "Links to attachments. Never the file content."
+          }
+        ]
+      }
+    },
+    {
+      "name": "dispatchStatus",
+      "type": {
+        "type": "enum",
+        "name": "DispatchStatus",
+        "doc": "Our side of delivery, after this event. UNKNOWN is the fallback for consumers that do not yet know a newer symbol.",
+        "symbols": [
+          "UNKNOWN",
+          "QUEUED",
+          "REJECTED",
+          "SENT",
+          "FAILED"
+        ],
+        "default": "UNKNOWN"
+      },
+      "doc": "Status of handing the email over to the provider. Delivery to each recipient is tracked in 'deliveries'."
+    },
+    {
+      "name": "attempts",
+      "type": "int",
+      "doc": "Number of delivery attempts so far."
+    },
+    {
+      "name": "queuedAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "When the email was composed and queued."
+    },
+    {
+      "name": "deliveries",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "RecipientDelivery",
+          "doc": "Per-recipient delivery outcome. An email to three people can be delivered to two and bounce for one (ADR-001, D5).",
+          "fields": [
+            {
+              "name": "recipient",
+              "type": "EmailAddress"
+            },
+            {
+              "name": "status",
+              "type": {
+                "type": "enum",
+                "name": "RecipientDeliveryStatus",
+                "doc": "The recipient's side of delivery, after this event.",
+                "symbols": [
+                  "UNKNOWN",
+                  "PENDING",
+                  "DELIVERED",
+                  "BOUNCED"
+                ],
+                "default": "UNKNOWN"
+              }
+            },
+            {
+              "name": "updatedAt",
+              "type": {
+                "type": "long",
+                "logicalType": "timestamp-millis"
+              },
+              "doc": "When this recipient's status last changed."
+            },
+            {
+              "name": "bounceType",
+              "type": [
+                "null",
+                {
+                  "type": "enum",
+                  "name": "BounceType",
+                  "doc": "HARD is permanent (e.g. the address does not exist); SOFT is temporary (e.g. mailbox full).",
+                  "symbols": [
+                    "UNKNOWN",
+                    "HARD",
+                    "SOFT"
+                  ],
+                  "default": "UNKNOWN"
+                }
+              ],
+              "default": null
+            },
+            {
+              "name": "bounceReason",
+              "type": [
+                "null",
+                {
+                  "type": "enum",
+                  "name": "BounceReason",
+                  "doc": "Why the recipient's mail server rejected the email.",
+                  "symbols": [
+                    "UNKNOWN",
+                    "RECIPIENT_NOT_FOUND",
+                    "DOMAIN_NOT_FOUND",
+                    "MAILBOX_FULL",
+                    "MESSAGE_TOO_LARGE",
+                    "CONTENT_REJECTED",
+                    "BLOCKED",
+                    "OTHER"
+                  ],
+                  "default": "UNKNOWN"
+                }
+              ],
+              "default": null
+            }
+          ]
+        }
+      },
+      "default": [],
+      "doc": "Current outcome for every recipient."
+    },
+    {
+      "name": "payload",
+      "type": [
+        {
+          "type": "record",
+          "name": "OutboundEmailQueued",
+          "doc": "SendEmail was accepted; the email is waiting to be handed to the provider.",
+          "fields": [
+            {
+              "name": "queuedAt",
+              "type": {
+                "type": "long",
+                "logicalType": "timestamp-millis"
+              },
+              "doc": "When the email was queued."
+            }
+          ]
+        },
+        {
+          "type": "record",
+          "name": "OutboundEmailRejected",
+          "doc": "SendEmail broke a business rule. Nothing was sent, and retrying the same request will not help.",
+          "fields": [
+            {
+              "name": "rejectedAt",
+              "type": {
+                "type": "long",
+                "logicalType": "timestamp-millis"
+              }
+            },
+            {
+              "name": "rejectionReason",
+              "type": {
+                "type": "enum",
+                "name": "RejectionReason",
+                "doc": "Why Communication refused to send.",
+                "symbols": [
+                  "UNKNOWN",
+                  "INVALID_RECIPIENT",
+                  "RECIPIENT_SUPPRESSED",
+                  "SENDER_NOT_VERIFIED",
+                  "ATTACHMENT_NOT_FOUND",
+                  "CONTENT_TOO_LARGE"
+                ],
+                "default": "UNKNOWN"
+              }
+            },
+            {
+              "name": "detail",
+              "type": [
+                "null",
+                "string"
+              ],
+              "default": null,
+              "doc": "Human-readable detail for support, e.g. which recipient was suppressed."
+            }
+          ]
+        },
+        {
+          "type": "record",
+          "name": "OutboundEmailSent",
+          "doc": "The email provider accepted the email for delivery. This does NOT mean it reached anyone.",
+          "fields": [
+            {
+              "name": "sentAt",
+              "type": {
+                "type": "long",
+                "logicalType": "timestamp-millis"
+              }
+            },
+            {
+              "name": "gatewayReference",
+              "type": [
+                "null",
+                "string"
+              ],
+              "default": null,
+              "doc": "Reference returned by the provider, for support investigations."
+            }
+          ]
+        },
+        {
+          "type": "record",
+          "name": "OutboundEmailDeliveryFailed",
+          "doc": "Handing the email to the provider failed.",
+          "fields": [
+            {
+              "name": "failedAt",
+              "type": {
+                "type": "long",
+                "logicalType": "timestamp-millis"
+              }
+            },
+            {
+              "name": "reason",
+              "type": "string"
+            },
+            {
+              "name": "attempt",
+              "type": "int",
+              "doc": "Which attempt this was, starting at 1."
+            },
+            {
+              "name": "retryable",
+              "type": "boolean",
+              "doc": "true if Communication will retry; false if the retry limit was reached or the error is permanent."
+            }
+          ]
+        },
+        {
+          "type": "record",
+          "name": "OutboundEmailDelivered",
+          "doc": "A recipient's mail server accepted the email.",
+          "fields": [
+            {
+              "name": "deliveredAt",
+              "type": {
+                "type": "long",
+                "logicalType": "timestamp-millis"
+              }
+            },
+            {
+              "name": "recipient",
+              "type": "EmailAddress",
+              "doc": "The recipient this delivery is about."
+            }
+          ]
+        },
+        {
+          "type": "record",
+          "name": "OutboundEmailBounced",
+          "doc": "A recipient's mail server rejected the email after it was sent.",
+          "fields": [
+            {
+              "name": "bouncedAt",
+              "type": {
+                "type": "long",
+                "logicalType": "timestamp-millis"
+              }
+            },
+            {
+              "name": "bounceType",
+              "type": "BounceType"
+            },
+            {
+              "name": "bounceReason",
+              "type": "BounceReason"
+            },
+            {
+              "name": "bouncedRecipients",
+              "type": {
+                "type": "array",
+                "items": "EmailAddress"
+              },
+              "doc": "The addresses that bounced."
+            },
+            {
+              "name": "diagnosticCode",
+              "type": [
+                "null",
+                "string"
+              ],
+              "default": null,
+              "doc": "Raw SMTP diagnostic, e.g. '550 5.1.1 The email address you entered couldn't be found'."
+            }
+          ]
+        }
+      ],
+      "doc": "What just happened. Exactly one event type. Consumers dispatch on metadata.messageType, never on this branch's class (ADR-002, D3)."
+    }
+  ]
+}
