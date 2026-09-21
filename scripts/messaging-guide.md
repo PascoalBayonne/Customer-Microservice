@@ -1,9 +1,10 @@
 # Commands, Events and Kafka Topics — A Practical Guide
 
-**A team guide, told through one real example: the Communication service that sends and receives our emails.**
+**A team guide, told through one real case: the Communication context that sends and receives email for our credit & loan subscription platform.**
 
-Audience: backend engineers working on any service that publishes or consumes messages.
+Audience: backend engineers in any context that publishes or consumes messages — Credit Subscription, Risk Assessment, Fraud, Offers & Pricing, Campaign, Customer, Communication.
 Reading time: ~20 minutes. Also usable as a 45-minute session (see [Running this as a session](#running-this-as-a-session)).
+Diagram: [communication-architecture.excalidraw](communication-architecture.excalidraw) — the whole picture on one canvas.
 Decisions behind it: [ADR-001](../adr/ADR-001-inbound-and-outbound-email-aggregates.md) · [ADR-002](../adr/ADR-002-kafka-topic-and-event-type-strategy.md) · Schemas: `communication-avro/`
 
 ---
@@ -15,30 +16,30 @@ Decisions behind it: [ADR-001](../adr/ADR-001-inbound-and-outbound-email-aggrega
 3. **A command has exactly one consumer, and that consumer owns its schema.** An event has one publisher, who owns its schema, and any number of subscribers.
 4. **Never name an event after something that didn't happen.** `OutboundEmailBounced`, never `EmailNotSent`.
 5. **Put the reason in the data, not in the name.** `bounceReason: RECIPIENT_NOT_FOUND`.
-6. **Events that must stay in order share one topic and one key.** For us: one topic per aggregate, keyed by the aggregate's ID.
+6. **Events that must stay in order share one topic and one key.** One topic per aggregate, keyed by the aggregate's ID.
 7. **Never mix commands and events in one topic.** Different owners, different access rules, different retention.
 8. **Consumers decide what a message is by an explicit `messageType` field, never by the class they deserialized.**
 9. **Use `BACKWARD_TRANSITIVE` compatibility.** It is the only setting that lets us add message types, and it keeps old data readable.
-10. **Don't use non-blocking retry topics on ordered topics.** They reorder events for the same key.
+10. **A bounced REGULATORY email is a compliance fact**, not just an ops problem: evidence to the archive, and the sending context falls back to another channel.
 
 ---
 
 ## Part 1 — Naming the domain
 
-We had to store every email we send, and every email we receive. They carry the same fields: sender, recipients, subject, body, attachments. So: one `Email` class?
+Communication has to store every email we send (application received, offer letter, SECCI, contract copy, campaign offer) and every email customers send us (a payslip, an ID document, a reply). They carry the same fields: sender, recipients, subject, body, attachments. So: one `Email` class?
 
 No. **Aggregate boundaries follow rules, not fields.**
 
 | | Email we send | Email we receive |
 |---|---|---|
-| Who creates it | We do | The outside world does |
+| Who creates it | We do, because a context asked | The customer does |
 | Lifecycle | Queued → Sent → per recipient: Delivered or Bounced. Or Rejected, or Failed | Received → Processed, Ignored or Quarantined |
-| Rules | At least one recipient, verified sender, retry limit, never sent twice | No duplicates by `Message-ID`, never processed twice |
-| Worst bug | Sending twice, or silently not sending | Processing the same provider webhook twice |
+| Rules | At least one recipient, verified sender, consent for marketing, retry limit, never sent twice | No duplicates by `Message-ID`, scanned before anyone is told, never processed twice |
+| Worst bug | Sending twice, or a regulatory email silently not arriving | Processing the same provider webhook twice; handing on an unscanned attachment |
 
 One class holding both would need `sentAt` empty for received mail, `receivedAt` empty for sent mail, and a direction check in every method. Neither set of rules could be enforced properly.
 
-**Names we rejected, and why** — this table is the part worth memorising, because the same traps appear in every domain:
+**Names we rejected, and why** — the same traps appear in Credit Subscription, Fraud and Pricing too:
 
 | Name | Why not |
 |---|---|
@@ -71,56 +72,70 @@ Sources: [CodeOpinion](https://codeopinion.com/commands-events-whats-the-differe
 
 The flow to remember: **a command causes behaviour → the behaviour produces events → subscribers react independently → a subscriber's reaction may be a new command.**
 
-### How that lands in Communication
+### How that lands here
 
-- **Sending is a command: `SendEmail`.** Ordering decides *when and why* ("order placed, so send a confirmation"). Communication decides *how*. Communication does **not** subscribe to `OrderPlaced`, because a generic service must not have to learn every domain's language.
-- **Communication owns the `SendEmail` schema**, even though it never sends the command. The one who does the work defines the request.
+- **Sending is a command: `SendEmail`.** Credit Subscription decides *when and why* ("the application was approved, so send the offer letter with its pre-contractual information"). Communication decides *how*.
+- **Communication owns the `SendEmail` schema**, even though it never sends the command. Whoever does the work defines the request.
+- **Communication does not subscribe to `CreditApplicationApproved`, `OfferIssued` or `FraudCheckFailed`.** A generic service must not have to learn credit, pricing and fraud language — otherwise every change to Credit Subscription's email policy becomes a Communication deployment.
 - **Outcomes come back as events**, never as a reply. A bounce can arrive hours later, long after any request/response has ended.
 
-### The story: `john@outbox.com` couldn't be found
+### Three kinds of email — a domain rule, not a technical one
+
+`SendEmail` carries a `category`, because in a bank these are genuinely different messages:
+
+| Category | Examples | Rules |
+|---|---|---|
+| **REGULATORY** | SECCI, ESIS, contract copy, rate-change notice | Must be delivered **and evidenced**. A marketing opt-out never blocks it |
+| **TRANSACTIONAL** | Application received, documents missing, decision ready | Tied to a case the customer started |
+| **MARKETING** | Campaign offers to a pre-approved population | Requires consent, honours unsubscribes |
+
+Suppression is scoped to match: an unsubscribe blocks `MARKETING` only; a hard bounce blocks everything, because the mailbox doesn't exist.
+
+### The story: the offer letter for APP-2026-00123 bounces
 
 Someone proposed an `EmailNotSent` event for this. Here's why that name is wrong:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant ORD as Ordering
+    participant CRS as Credit Subscription
     participant COM as Communication
     participant PRV as Email provider
     participant MTA as outbox.com mail server
     participant CUS as Customer
 
-    ORD->>COM: SendEmail «command»
-    COM-->>ORD: OutboundEmailQueued «event»
+    CRS->>COM: SendEmail {category: REGULATORY, ref: application APP-2026-00123} «command»
+    COM-->>CRS: OutboundEmailQueued «event»
     COM->>PRV: deliver
     PRV-->>COM: accepted
-    COM-->>ORD: OutboundEmailSent «event»
+    COM-->>CRS: OutboundEmailSent «event»
     PRV->>MTA: RCPT TO:<john@outbox.com>
     MTA-->>PRV: 550 5.1.1 user unknown
     Note over PRV,COM: seconds to hours later
     PRV->>COM: bounce webhook
-    COM-->>ORD: OutboundEmailBounced «event»
+    COM-->>CRS: OutboundEmailBounced «event»
     COM-->>CUS: OutboundEmailBounced «event»
     COM->>COM: policy: hard bounce → SuppressRecipient
     CUS->>CUS: policy: MarkEmailAddressUnverified
+    CRS->>CRS: the SECCI never arrived → fall back to post / portal
 ```
 
 **The email was sent.** The provider accepted it and attempted delivery. What failed was delivery to one recipient, reported afterwards. And "not sent" merges three situations that need opposite reactions:
 
 | What happened | Event | What a consumer should do |
 |---|---|---|
-| A rule refused it; nothing was sent | `OutboundEmailRejected` | Fix the data. Resending as-is is pointless |
+| A rule refused it (no consent, suppressed address); nothing was sent | `OutboundEmailRejected` | Fix the data or the consent. Resending as-is is pointless |
 | We couldn't hand it to the provider | `OutboundEmailDeliveryFailed` (`retryable`) | Retry, or alert when final |
-| The recipient's server refused it | `OutboundEmailBounced` (HARD/SOFT) | Block the address; mark it unverified |
+| The recipient's server refused it | `OutboundEmailBounced` (HARD/SOFT) | Block the address, mark it unverified, and for REGULATORY change channel |
 
-With one `EmailNotSent`, every consumer would have to parse a free-text reason to work out which of the three it was.
+With one `EmailNotSent`, every consumer would have to parse a free-text reason to work out which of the three it was — including the compliance one.
 
 ### Naming rules we follow
 
 **Commands** — `<Verb><Noun>`, imperative, in the *receiver's* language:
 - ✅ `SendEmail`, `CancelScheduledEmail`
 - ❌ `CreateEmail` (CRUD), `EmailToSend` (a noun), `SendEmailCommand` (redundant suffix)
-- ❌ `NotifyCustomer` — that's Ordering's own command; its handler then sends `SendEmail`
+- ❌ `NotifyApplicant`, `SendOfferLetter`, `SendSECCI` — these are valid commands **inside Credit Subscription**; their handlers then send `SendEmail`
 
 **Events** — `<Aggregate><PastTenseVerb>`, a positive, specific fact:
 - ✅ `OutboundEmailBounced`, `InboundEmailQuarantined`
@@ -160,9 +175,11 @@ Why not one topic per event type? Because a consumer reading `…sent` and `…b
 | Retries | **Blocking retries with backoff, then a dead-letter topic.** Non-blocking retry topics (`@RetryableTopic`) let later events for the same key overtake the failed one |
 
 **Ownership through access rules**, not convention:
-- Command topic: many services may write, **only Communication may read**.
-- Event topics: **only Communication may write**, subscribers may read.
+- Command topic: Credit Subscription, Risk Assessment, Fraud and Campaign may write; **only Communication may read**.
+- Event topics: **only Communication may write**; Customer, Credit Subscription, Campaign and the Regulatory Archive may read.
 - Dead-letter topics: the command DLQ belongs to Communication; each *consumer* owns its own DLQ for the event topics.
+
+**Throughput to watch:** transactional credit email is low volume, but a Campaign send to a pre-approved population is not. If per-recipient `Delivered` events ever swamp consumers that only want bounces, the answer is a Communication-owned derived topic, not splitting the source topic.
 
 > **Take-away:** ordering picks your topics. Everything else is a tiebreaker.
 
@@ -177,16 +194,18 @@ OutboundEmailEvent  (topic: communication.outbound-email.events)
 ├── metadata { messageId, messageType, occurredAt, source, correlationId, causationId }
 ├── outboundEmailId          ← the Kafka key
 ├── aggregateVersion         ← detect duplicates and gaps
-├── requestId, reference     ← trace back to the SendEmail that caused it
-├── content, dispatchStatus, attempts, queuedAt, deliveries[]   ← current state
+├── requestId, reference     ← credit-subscription:application:APP-2026-00123
+├── category                 ← TRANSACTIONAL | REGULATORY | MARKETING
+├── content, dispatchStatus, attempts, queuedAt, deliveries[]
 └── payload: union [ Queued | Rejected | Sent | DeliveryFailed | Delivered | Bounced ]
 ```
 
-Three details worth copying into other services:
+Four details worth copying into other contexts:
 
-1. **Attachments are links, never bytes.** `attachmentId`, `fileName`, `contentType`, `sizeBytes`, `sha256Checksum`, `downloadUri`. The URI must be **stable and authenticated, never pre-signed**: messages outlive a pre-signed URL, and anyone who can read the topic would otherwise gain access to the file.
-2. **Delivery is tracked per recipient** (`deliveries[]`). An email to three people can reach two and bounce for one. A single email-level status can't express that.
-3. **The command envelope has a one-branch union today.** Adding `CancelScheduledEmail` later is then just another branch. Turning a bare `SendEmail` record into an envelope later would be a breaking change.
+1. **Attachments are links, never bytes.** `attachmentId`, `fileName`, `contentType`, `sizeBytes`, `sha256Checksum`, `downloadUri` into the document store. The URI must be **stable and authenticated, never pre-signed**: messages outlive a pre-signed URL, and anyone who can read the topic would otherwise be able to download a customer's SECCI or payslip.
+2. **Delivery is tracked per recipient** (`deliveries[]`). An email to three people can reach two and bounce for one.
+3. **What an email may contain is a domain rule.** No decisions, scores, amounts, rates, IBANs or document contents in the body — the email says something is ready and links to the authenticated portal. Fraud-sensitive emails say less, not more.
+4. **The command envelope has a one-branch union today.** Adding `CancelScheduledEmail` later is then just another branch.
 
 ---
 
@@ -211,10 +230,10 @@ Two Avro facts that decide the choice:
 ### Our setting: `BACKWARD_TRANSITIVE` on all three subjects
 
 1. It is **the only setting that lets us add message types**. `FULL`, `FORWARD` and their transitive forms would freeze the catalogue at today's 6 + 4 + 1.
-2. **Transitive**, because events stay on the topic for weeks. A consumer must read data written by *any* schema still in retention, not just the previous one.
+2. **Transitive**, because events stay on the topic for weeks and consumers lag or replay.
 3. It **fits the command topic exactly**: `BACKWARD` assumes consumers upgrade first, and the command topic's only consumer is Communication itself.
 4. Its weak spot — old consumers reading new data — is closed **in the application**, not the registry (Part 6).
-5. **House rule:** add fields only with defaults and never rename or delete one. Then everyday changes are compatible in both directions anyway, and the loosened direction is used for exactly one thing: adding a message type.
+5. **House rule:** add fields only with defaults, never rename or delete one. Then everyday changes are compatible both ways, and the loosened direction is used for one thing only: adding a message type.
 
 Never `NONE`. A breaking change means a new topic (`…events.v2`) with dual publishing, not a lowered setting.
 
@@ -222,7 +241,7 @@ Never `NONE`. A breaking change means a new topic (`…events.v2`) with dual pub
 
 ## Part 6 — The trap we found (please read this one)
 
-"Backward compatible" sounds safe. It isn't the whole story, and we proved it with a test on our own schema.
+"Backward compatible" sounds safe. It isn't the whole story, and we proved it on our own schema.
 
 We added a new event type, `OutboundEmailDelivered`, and let a consumer still on the **old** schema read it:
 
@@ -232,11 +251,11 @@ We added a new event type, `OutboundEmailDelivered`, and let a consumer still on
 | Old consumer, an event type it knows | ✅ Fine |
 | **Old consumer, the new event type** | ⚠️ **No error. It was read as `OutboundEmailQueued`** |
 
-When Avro meets a union branch it doesn't know by name, it falls back to the first known branch that structurally fits. **Empty records, and records whose fields all have defaults, fit anything.** An old consumer would have believed the email was still queued when it had actually been delivered. The Schema Registry cannot catch this: it only checks that *new* consumers can read *old* data.
+When Avro meets a union branch it doesn't know by name, it falls back to the first known branch that structurally fits. **Empty records, and records whose fields all have defaults, fit anything.** An old consumer would have believed the offer letter was still queued when it had actually been delivered — or still "sent" when it had bounced, which in a regulatory case is a compliance miss, not a display bug. The Schema Registry cannot catch this: it only checks that *new* consumers can read *old* data.
 
 **The three rules that came out of it:**
 
-1. **Dispatch on `metadata.messageType`**, a required string like `com.acme.communication.OutboundEmailBounced`, repeated in the CloudEvents `ce_type` header. **Never** decide from the deserialized class.
+1. **Dispatch on `metadata.messageType`**, a required string like `com.bank.communication.OutboundEmailBounced`, repeated in the CloudEvents `ce_type` header. **Never** decide from the deserialized class.
 2. **Skip unknown types** — commit and move on. Wrap the deserializer in `ErrorHandlingDeserializer`, and if a record that fails to deserialize has a `ce_type` you don't handle, skip it too.
 3. **No empty or all-default message types.** Every event record needs at least one required field (that's why `OutboundEmailQueued` carries `queuedAt`).
 
@@ -248,7 +267,7 @@ void on(ConsumerRecord<String, OutboundEmailEvent> record) {
         return;                                            // duplicate or stale
     }
     switch (event.getMetadata().getMessageType()) {
-        case "com.acme.communication.OutboundEmailBounced" ->
+        case "com.bank.communication.OutboundEmailBounced" ->
             handleBounce(event, (OutboundEmailBounced) event.getPayload());
         default -> { }                                     // unknown or irrelevant: skip, never guess
     }
@@ -257,7 +276,7 @@ void on(ConsumerRecord<String, OutboundEmailEvent> record) {
 
 After rule 3, the same test fails loudly instead: `AvroTypeException: Found …OutboundEmailComplained, expecting union[…]`. Loud beats silent. And with rule 1, consumers skip the type before it can hurt them, so **adding an event type no longer depends on every team deploying in the right order**.
 
-> **Take-away:** schema compatibility protects the format. Only the consumer can protect the meaning.
+> **Take-away:** schema compatibility protects the format. Only the consumer protects the meaning.
 
 ---
 
@@ -266,7 +285,7 @@ After rule 3, the same test fails loudly instead: `AvroTypeException: Found …O
 ### Adding a new event type
 
 1. Add the record as a union branch in the topic's `.avsc`. Give it at least one required field.
-2. Add its `messageType` constant: `com.acme.communication.<EventName>`.
+2. Add its `messageType` constant: `com.bank.communication.<EventName>`.
 3. Run the schema tests (`mvn test` in `communication-avro`): rules, round-trip, and the unknown-type check.
 4. CI runs `test-compatibility` against the registry (`BACKWARD_TRANSITIVE`), then registers on merge.
 5. Publish it from the producer; document it in the event catalogue with owner and consumers.
@@ -288,7 +307,8 @@ After rule 3, the same test fails loudly instead: `AvroTypeException: Found …O
 - [ ] Is `messageType` set, and does the consumer dispatch on it rather than on the payload class?
 - [ ] Does the topic and key preserve the ordering this message needs?
 - [ ] For a command: exactly one consumer, and do they own the schema?
-- [ ] Are attachments or large blobs links rather than bytes?
+- [ ] Are attachments and documents links rather than bytes, and is the body free of decisions, amounts and PII?
+- [ ] Is the `category` right, and does the consent/suppression rule match it?
 - [ ] No non-blocking retry topic on an ordered topic?
 
 ---
@@ -297,17 +317,18 @@ After rule 3, the same test fails loudly instead: `AvroTypeException: Found …O
 
 A 45-minute walkthrough that works well:
 
-1. **(5 min)** Show the `EmailNotSent` proposal. Ask the room: is it a command or an event, and is the name right?
-2. **(10 min)** Part 1 and Part 2: names, then the bounce diagram.
+1. **(5 min)** Show the `EmailNotSent` proposal for the bounced offer letter. Ask the room: command or event, and is the name right?
+2. **(10 min)** Part 1 and Part 2: names, categories, then the bounce diagram.
 3. **(10 min)** Part 3: why one topic per aggregate, and the ordering chain.
-4. **(10 min)** Part 6: run the union test live, and watch a new event type get read as an old one.
-5. **(10 min)** Apply it to a service of your own: what are its commands, its events, its topics and its keys?
+4. **(10 min)** Part 6: run the union test live and watch a new event type get read as an old one.
+5. **(10 min)** Apply it to your own context: what are Credit Subscription's (or Fraud's, or Pricing's) commands, events, topics and keys?
 
 **Discussion questions:**
-- Where in *your* service is there an `Email`-style name that hides two different things?
-- Which of your events are really commands in disguise?
-- If a consumer of yours lags two schema versions, what breaks?
+- Where in *your* context is there an `Email`-style name that hides two different things?
+- Which of your events are really commands in disguise (`…Requested`, `…Needed`)?
+- If a consumer of yours lags two schema versions, what breaks — and would you notice, or would it be read as something else?
 - Which of your topics would lose ordering if someone doubled the partition count tomorrow?
+- Which of your messages carry data that should never leave the bank by email?
 
 ---
 
@@ -322,16 +343,19 @@ A 45-minute walkthrough that works well:
 | **Envelope** | The single record per topic, whose `payload` union holds the message types |
 | **messageType** | The field (and `ce_type` header) that says what a message is |
 | **aggregateVersion** | Per-aggregate counter used to spot duplicates and gaps |
+| **Category** | TRANSACTIONAL / REGULATORY / MARKETING — decides consent and suppression |
+| **SECCI / ESIS** | Standardised pre-contractual information for consumer credit / mortgages. Sending it is a duty, so delivery must be evidenced |
 | **Sent vs Delivered** | Sent = the provider accepted it. Delivered = the recipient's server accepted it |
 | **Hard / soft bounce** | Permanent (address doesn't exist) / temporary (mailbox full) |
-| **Suppression** | Blocking future sends to an address after a hard bounce |
+| **Suppression** | Blocking future sends to an address after a hard bounce, scoped by category |
 
 ## Where everything lives
 
 | What | Where |
 |---|---|
-| Aggregates, commands, events, naming | [ADR-001](../adr/ADR-001-inbound-and-outbound-email-aggregates.md) |
-| Topics, envelope, ordering, compatibility | [ADR-002](../adr/ADR-002-kafka-topic-and-event-type-strategy.md) |
+| One diagram of all of it | [communication-architecture.excalidraw](communication-architecture.excalidraw) — open at excalidraw.com or with the VS Code extension |
+| Aggregates, commands, events, naming, categories | [ADR-001](../adr/ADR-001-inbound-and-outbound-email-aggregates.md) |
+| Topics, envelope, ordering, compatibility, archive | [ADR-002](../adr/ADR-002-kafka-topic-and-event-type-strategy.md) |
 | Avro schemas for the three topics | `communication-avro/src/main/avro/` |
 | Schema rules, round-trip and unknown-type tests | `communication-avro/src/test/java/` |
 | Schema generator (one source for shared types) | `communication-avro/tools/generate_schemas.py` |
